@@ -246,4 +246,4 @@ const answer = await llmService.send(model, text)
 
 ## 📄 许可证
 
-本项目仅供学习和演示使用。
+本项目仅供学习和演示使用。"# AISmallWorld" 
