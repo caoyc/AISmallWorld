@@ -244,7 +244,6 @@ const answer = await llmService.send(model, text)
 - **技术**: 纯 HTML + CSS + JavaScript
 - **访问**: 通过 HTTP 服务器访问 `http://localhost:8000/demo.html`
 
-<<<<<<< HEAD
 ## 🌍 BoinicWorld 游戏世界指令系统
 
 AISmallWorld 集成了 BoinicWorld 智能游戏世界系统，支持通过指令操作游戏世界。目前支持**正常对话模式**和**强指令模式（! 开头）**。
