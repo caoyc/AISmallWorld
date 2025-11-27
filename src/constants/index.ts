@@ -35,8 +35,8 @@ export const SDK_CONFIG = {
 
 // 虚拟人 SDK 默认配置
 export const AVATAR_CONFIG = {
-  DEFAULT_APP_ID: '54c3c56bdc0a48fdb47ac2b55f5ac6ea',
-  DEFAULT_APP_SECRET: '3d58d501a390488d87289d1fb91539b0'
+  DEFAULT_APP_ID: '',
+  DEFAULT_APP_SECRET: ''
 } as const
 
 // 支持的LLM模型列表
