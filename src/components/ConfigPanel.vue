@@ -2640,11 +2640,13 @@ function handleTextareaInput(event: Event) {
 // 事件处理函数
 // 用户角色编辑表单中的连接函数
 async function handleConnectUserRole() {
-  if (!editingUserRole.value) {
-    showToastMessage('请先选择要编辑的用户角色', 'error')
+  // 检查是否在编辑表单中
+  if (!showUserRoleEditForm.value) {
+    showToastMessage('请先打开角色编辑表单', 'error')
     return
   }
-  if (editingUserRole.value.isConnecting) return
+  // 如果是编辑已有角色，检查连接状态
+  if (editingUserRole.value?.isConnecting) return
   
   // 检查SDK是否已加载
   if (!window.XmovAvatar) {
@@ -2670,6 +2672,39 @@ async function handleConnectUserRole() {
   if (!userRoleForm.value.avatarAppId || !userRoleForm.value.avatarAppSecret) {
     showToastMessage('请先配置数字人的 App ID 和 App Secret', 'error')
     return
+  }
+  
+  // 如果是创建新角色，创建一个临时的连接状态
+  if (!editingUserRole.value) {
+    editingUserRole.value = {
+      id: 0,
+      user: userRoleForm.value.user || '',
+      name: userRoleForm.value.name || '',
+      type: userRoleForm.value.type,
+      avatar: userRoleForm.value.avatar || '',
+      positionX: userRoleForm.value.positionX,
+      positionY: userRoleForm.value.positionY,
+      scale: userRoleForm.value.scale,
+      baseURL: userRoleForm.value.baseURL || '',
+      model: userRoleForm.value.model || '',
+      apiKey: globalApiKey.value || '',
+      avatarAppId: userRoleForm.value.avatarAppId || '',
+      avatarAppSecret: userRoleForm.value.avatarAppSecret || '',
+      useDigitalHumanVoice: userRoleForm.value.useDigitalHumanVoice !== undefined ? userRoleForm.value.useDigitalHumanVoice : true,
+      ttsProvider: userRoleForm.value.ttsProvider || 'doubao',
+      ttsVoice: userRoleForm.value.ttsVoice || '',
+      ttsSpeed: userRoleForm.value.ttsSpeed || 1.0,
+      ttsVolume: userRoleForm.value.ttsVolume || 1.0,
+      ttsPreviewText: userRoleForm.value.ttsPreviewText || '',
+      enableVoicePlay: userRoleForm.value.enableVoicePlay !== undefined ? userRoleForm.value.enableVoicePlay : true,
+      enableAutoPlay: userRoleForm.value.enableAutoPlay !== undefined ? userRoleForm.value.enableAutoPlay : false,
+      enableAutoSwitch: userRoleForm.value.enableAutoSwitch !== undefined ? userRoleForm.value.enableAutoSwitch : false,
+      isCurrent: false,
+      isConnecting: false,
+      isConnected: false,
+      showDigitalHuman: false,
+      digitalHumanInstance: null
+    } as UserRole
   }
   
   editingUserRole.value.isConnecting = true
@@ -2713,11 +2748,13 @@ async function handleConnectUserRole() {
 
 // 伙伴角色编辑表单中的连接函数
 async function handleConnectPartnerRole() {
-  if (!editingRole.value) {
-    showToastMessage('请先选择要编辑的伙伴角色', 'error')
+  // 检查是否在编辑表单中
+  if (!showRoleEditForm.value) {
+    showToastMessage('请先打开角色编辑表单', 'error')
     return
   }
-  if (editingRole.value.isConnecting) return
+  // 如果是编辑已有角色，检查连接状态
+  if (editingRole.value?.isConnecting) return
   
   // 检查SDK是否已加载
   if (!window.XmovAvatar) {
@@ -2743,6 +2780,38 @@ async function handleConnectPartnerRole() {
   if (!roleForm.value.avatarAppId || !roleForm.value.avatarAppSecret) {
     showToastMessage('请先配置数字人的 App ID 和 App Secret', 'error')
     return
+  }
+  
+  // 如果是创建新角色，创建一个临时的连接状态
+  if (!editingRole.value) {
+    editingRole.value = {
+      id: 0,
+      name: roleForm.value.name || '',
+      user: roleForm.value.user || '',
+      type: roleForm.value.type,
+      description: roleForm.value.description || '',
+      avatar: roleForm.value.avatar || '',
+      positionX: roleForm.value.positionX,
+      positionY: roleForm.value.positionY,
+      scale: roleForm.value.scale,
+      baseURL: roleForm.value.baseURL || '',
+      model: roleForm.value.model || '',
+      apiKey: globalApiKey.value || '',
+      avatarAppId: roleForm.value.avatarAppId || '',
+      avatarAppSecret: roleForm.value.avatarAppSecret || '',
+      useDigitalHumanVoice: roleForm.value.useDigitalHumanVoice !== undefined ? roleForm.value.useDigitalHumanVoice : true,
+      ttsProvider: roleForm.value.ttsProvider || 'doubao',
+      ttsVoice: roleForm.value.ttsVoice || '',
+      ttsSpeed: roleForm.value.ttsSpeed || 1.0,
+      ttsVolume: roleForm.value.ttsVolume || 1.0,
+      enableVoicePlay: roleForm.value.enableVoicePlay !== undefined ? roleForm.value.enableVoicePlay : true,
+      enableAutoPlay: roleForm.value.enableAutoPlay !== undefined ? roleForm.value.enableAutoPlay : false,
+      enableAutoSwitch: roleForm.value.enableAutoSwitch !== undefined ? roleForm.value.enableAutoSwitch : false,
+      isConnecting: false,
+      isConnected: false,
+      showDigitalHuman: false,
+      digitalHumanInstance: null
+    } as Role
   }
   
   editingRole.value.isConnecting = true

@@ -1257,14 +1257,21 @@ export function deleteRole(id, apiKey) {
     throw new Error('apiKey不能为空')
   }
   
-  // 先检查角色是否存在且属于该用户（按 api_key 过滤）
-  const checkStmt = db.prepare('SELECT id FROM roles WHERE id = ? AND api_key = ?')
+  // 先检查角色是否存在且属于该用户（按 api_key 过滤），并获取user字段
+  const checkStmt = db.prepare('SELECT id, user FROM roles WHERE id = ? AND api_key = ?')
   const existing = checkStmt.get(id, apiKey)
   
   if (!existing) {
     throw new Error('角色不存在或无权限')
   }
   
+  // 删除与该角色关联的聊天记录（user_id格式：apiKey:user）
+  const userId = `${apiKey}:${existing.user}`
+  const deleteMessagesStmt = db.prepare('DELETE FROM chat_messages WHERE user_id = ?')
+  const messagesResult = deleteMessagesStmt.run(userId)
+  console.log(`删除角色 ${id} 时，同时删除了 ${messagesResult.changes} 条关联的聊天记录`)
+  
+  // 删除角色
   const stmt = db.prepare('DELETE FROM roles WHERE id = ? AND api_key = ?')
   const result = stmt.run(id, apiKey)
   
