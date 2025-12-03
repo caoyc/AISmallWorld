@@ -60,7 +60,8 @@ class LlmService {
       
       const completion = await this.openai.chat.completions.create({
         messages,
-        model: config.model
+        model: config.model,
+        ...(config.user && { user: config.user })
       })
 
       const response = completion.choices[0]?.message?.content
@@ -80,10 +81,11 @@ class LlmService {
    * @param config.model - 模型名称
    * @param config.baseURL - 可选的基础URL
    * @param userMessage - 用户输入的消息内容
+   * @param chatHistory - 聊天历史记录（可选）
    * @returns Promise<AsyncIterable<string>> - 返回异步可迭代的字符串流
    * @throws {Error} - 当LLM客户端未初始化或请求失败时抛出错误
    */
-  async sendMessageWithStream(config: LlmConfig, userMessage: string): Promise<AsyncIterable<string>> {
+  async sendMessageWithStream(config: LlmConfig, userMessage: string, chatHistory?: ChatMessage[]): Promise<AsyncIterable<string>> {
     this.initClient(config)
     
     if (!this.openai) {
@@ -91,14 +93,22 @@ class LlmService {
     }
 
     const messages: ChatMessage[] = [
-      { role: 'system', content: LLM_CONFIG.SYSTEM_PROMPT },
-      { role: 'user', content: userMessage }
+      { role: 'system', content: LLM_CONFIG.SYSTEM_PROMPT }
     ]
+    
+    // 添加聊天历史（如果有）
+    if (chatHistory && chatHistory.length > 0) {
+      messages.push(...chatHistory)
+    }
+    
+    // 添加当前用户消息
+    messages.push({ role: 'user', content: userMessage })
 
     const stream = await this.openai.chat.completions.create({
       messages,
       model: config.model,
-      stream: true
+      stream: true,
+      ...(config.user && { user: config.user })
     })
 
     return (async function* () {

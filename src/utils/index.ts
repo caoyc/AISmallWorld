@@ -1,4 +1,5 @@
 import { APP_CONFIG } from '../constants'
+import md5 from 'md5'
 
 /**
  * 生成随机容器ID
@@ -11,6 +12,15 @@ export function generateContainerId(): string {
     randomID += bytes[i].toString(16).padStart(2, '0')
   }
   return `${APP_CONFIG.CONTAINER_PREFIX}${randomID}`
+}
+
+/**
+ * 将字符串转换为MD5哈希（用于生成有效的CSS选择器ID）
+ * @param str - 要哈希的字符串
+ * @returns {string} - 返回32个十六进制字符的哈希值
+ */
+export function toMd5(str: string): string {
+  return md5(str)
 }
 
 /**

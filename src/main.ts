@@ -2,6 +2,13 @@ import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
 import { initSDKs, checkSDKStatus } from './utils/sdk-loader'
+import { rendererManager } from './renderers'
+import { DigitalHumanRenderer } from './renderers/digital-human'
+
+// 注册渲染器工厂
+rendererManager.registerFactory('digital_human', (config) => {
+  return new DigitalHumanRenderer(config)
+})
 
 // 初始化应用
 async function initApp() {

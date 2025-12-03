@@ -10,7 +10,6 @@ export const APP_CONFIG = {
 export const LLM_CONFIG = {
   BASE_URL: 'http://36.134.38.44:9000/v1',
   DEFAULT_MODEL: 'deepseek-chat',
-  DEFAULT_API_KEY: 'default_user',
   SYSTEM_PROMPT: '你是人工智能助手'
 } as const
 
@@ -31,12 +30,6 @@ export const SDK_CONFIG = {
   GATEWAY_URL: 'https://nebula-agent.xingyun3d.com/user/v1/ttsa/session',
   DATA_SOURCE: '2',
   CUSTOM_ID: 'demo'
-} as const
-
-// 虚拟人 SDK 默认配置
-export const AVATAR_CONFIG = {
-  DEFAULT_APP_ID: '',
-  DEFAULT_APP_SECRET: ''
 } as const
 
 // 支持的LLM模型列表
