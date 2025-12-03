@@ -3509,6 +3509,9 @@ async function clearChatHistory() {
     // 清空前端状态
     appState.chatHistory = []
     showToastMessage('对话历史已清空', 'success')
+    
+    // 关闭菜单
+    showMenu.value = false
   } catch (error) {
     console.error('清空对话历史失败:', error)
     showToastMessage('清空对话历史失败', 'error')
