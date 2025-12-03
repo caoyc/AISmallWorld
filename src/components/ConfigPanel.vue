@@ -1211,6 +1211,27 @@
                         </div>
                       </div>
                     </div>
+                    <!-- URL输入（可选） -->
+                    <div class="avatar-url-input" style="margin-top: 12px;">
+                      <input 
+                        id="user-role-avatar-url"
+                        type="text" 
+                        v-model="userRoleForm.avatar"
+                        placeholder="或输入图片URL"
+                      />
+                    </div>
+                    <!-- 缩放比例 -->
+                    <div class="form-group" style="margin-top: 12px;">
+                      <label for="user-role-scale">缩放比例: {{ userRoleForm.scale.toFixed(2) }}x</label>
+                      <input 
+                        id="user-role-scale"
+                        type="range" 
+                        v-model.number="userRoleForm.scale"
+                        min="0.5" 
+                        max="2.0" 
+                        step="0.1"
+                      />
+                    </div>
                     <!-- 数字人 SDK 配置 -->
                     <div class="config-divider" style="margin-top: 12px;"></div>
                     <div class="config-section" style="margin-top: 12px;">
@@ -1394,7 +1415,6 @@
                         选择图片
                       </button>
                     </div>
-                  </div>
                   <!-- URL输入（可选） -->
                   <div class="avatar-url-input" style="margin-top: 12px;">
                     <input 
@@ -1404,18 +1424,20 @@
                       placeholder="或输入图片URL"
                     />
                   </div>
+                  <!-- 缩放比例 -->
+                  <div class="form-group" style="margin-top: 12px;">
+                    <label for="user-role-scale">缩放比例: {{ userRoleForm.scale.toFixed(2) }}x</label>
+                    <input 
+                      id="user-role-scale"
+                      type="range" 
+                      v-model.number="userRoleForm.scale"
+                      min="0.5" 
+                      max="2.0" 
+                      step="0.1"
+                    />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div class="form-group">
-                <label for="user-role-scale">缩放比例: {{ userRoleForm.scale.toFixed(2) }}x</label>
-                <input 
-                  id="user-role-scale"
-                  type="range" 
-                  v-model.number="userRoleForm.scale"
-                  min="0.5" 
-                  max="2.0" 
-                  step="0.1"
-                />
               </div>
             </div>
             
@@ -1839,7 +1861,7 @@ const userRoleForm = ref({
   ttsSpeed: 1.0,
   ttsVolume: 1.0,
   ttsPreviewText: '欢迎来到AI伴侣小世界！这是一个智能对话平台，支持数字人和立绘两种角色类型，可以与AI进行自然流畅的对话交流。',
-  enableVoicePlay: true,
+  enableVoicePlay: false,
   enableAutoPlay: false,
   enableAutoSwitch: false
 })
@@ -1877,7 +1899,7 @@ const roleForm = ref({
   ttsSpeed: 1.0,
   ttsVolume: 1.0,
   ttsPreviewText: '欢迎来到AI伴侣小世界！这是一个智能对话平台，支持数字人和立绘两种角色类型，可以与AI进行自然流畅的对话交流。',
-  enableVoicePlay: true,
+  enableVoicePlay: false,
   enableAutoPlay: false,
   enableAutoSwitch: false
 })
@@ -2019,6 +2041,24 @@ onUnmounted(() => {
   }
 })
 
+// 监听伙伴角色类型变化，自动更新播放语音勾选项
+watch([() => roleForm.value.type, () => roleForm.value.useDigitalHumanVoice], ([newType, newUseDigitalHumanVoice], [oldType, oldUseDigitalHumanVoice]) => {
+  // 只在值发生变化时才检测
+  if (oldType !== undefined && oldUseDigitalHumanVoice !== undefined) {
+    // 仅当角色是数字人且使用数字人自带的语音播放时设置为勾选
+    roleForm.value.enableVoicePlay = newType === 'digital_human' && newUseDigitalHumanVoice === true
+  }
+})
+
+// 监听用户角色类型变化，自动更新播放语音勾选项
+watch([() => userRoleForm.value.type, () => userRoleForm.value.useDigitalHumanVoice], ([newType, newUseDigitalHumanVoice], [oldType, oldUseDigitalHumanVoice]) => {
+  // 只在值发生变化时才检测
+  if (oldType !== undefined && oldUseDigitalHumanVoice !== undefined) {
+    // 仅当角色是数字人且使用数字人自带的语音播放时设置为勾选
+    userRoleForm.value.enableVoicePlay = newType === 'digital_human' && newUseDigitalHumanVoice === true
+  }
+})
+
 // 监听对话历史变化，自动滚动到底部
 watch(() => appState.chatHistory.length, (newLength, oldLength) => {
   nextTick(() => {
@@ -2082,9 +2122,18 @@ function canPlayMessage(message: ChatMessage): boolean {
     return false
   }
   
-  // 数字人类型：需要连接状态
+  // 数字人类型
   if (role.type === 'digital_human') {
-    return role.isConnected === true && role.digitalHumanInstance !== null
+    // 如果使用数字人语音，需要连接状态
+    if (role.useDigitalHumanVoice === true) {
+      return role.isConnected === true && role.digitalHumanInstance !== null
+    }
+    // 如果使用TTS语音，需要TTS配置（和立绘类型一样）
+    else {
+      const hasTtsConfig = !!(role.ttsVoice && appState.tts.apiKey) || 
+                           !!(appState.tts.apiKey && role.ttsProvider)
+      return hasTtsConfig
+    }
   }
   
   // 立绘类型：需要配置TTS（有音色配置或全局TTS配置）
@@ -2168,51 +2217,95 @@ async function playMessageAudio(message: ChatMessage, index: number) {
   try {
     // 根据角色类型选择TTS引擎
     if (role.type === 'digital_human') {
-      // 数字人：使用SDK的TTS
-      if (!role.isConnected || !role.digitalHumanInstance) {
-        showToastMessage('数字人未连接，请先连接数字人', 'error')
-        return
-      }
-      
-      // 如果正在说话，先停止
-      if (avatarState.value === 'speak' && role.digitalHumanInstance) {
-        role.digitalHumanInstance.think()
-        await delay(500) // 等待停止完成
-      }
-      
-      // 设置播放状态
-      playingMessageId.value = index
-      currentPlayingRole = role // 记录当前播放的角色
-      
-      // 生成 SSML 格式文本
-      const ssml = generateSSML(content.trim())
-      console.log('生成的 SSML:', ssml)
-      
-      // 调用数字人 SDK 的 speak 方法
-      console.log('调用 speak 方法...')
-      role.digitalHumanInstance.speak(ssml, true, true)
-      console.log('speak 方法调用完成')
-      
-      // 监听数字人状态变化，当停止说话时清除播放状态
-      const stopWatcher = watch(() => avatarState.value, (newState) => {
-        console.log('数字人状态变化:', newState)
-        if (newState !== 'speak' && playingMessageId.value === index) {
-          console.log('数字人停止说话，清除播放状态')
-          playingMessageId.value = null
-          currentPlayingRole = null // 清除当前播放角色
-          stopWatcher() // 停止监听
+      // 数字人：根据语音选项选择播放方式
+      if (role.useDigitalHumanVoice === true) {
+        // 使用数字人SDK的TTS：需要连接
+        if (!role.isConnected || !role.digitalHumanInstance) {
+          showToastMessage('数字人未连接，请先连接数字人', 'error')
+          return
         }
-      })
-      
-      // 设置超时，防止状态监听失效
-      setTimeout(() => {
-        if (playingMessageId.value === index) {
-          console.log('播放超时，清除播放状态')
-          playingMessageId.value = null
-          currentPlayingRole = null // 清除当前播放角色
-          stopWatcher()
+        
+        // 如果正在说话，先停止
+        if (avatarState.value === 'speak' && role.digitalHumanInstance) {
+          role.digitalHumanInstance.think()
+          await delay(500) // 等待停止完成
         }
-      }, 60000) // 60秒超时
+        
+        // 设置播放状态
+        playingMessageId.value = index
+        currentPlayingRole = role // 记录当前播放的角色
+        
+        // 生成 SSML 格式文本
+        const ssml = generateSSML(content.trim())
+        console.log('生成的 SSML:', ssml)
+        
+        // 调用数字人 SDK 的 speak 方法
+        console.log('调用 speak 方法...')
+        role.digitalHumanInstance.speak(ssml, true, true)
+        console.log('speak 方法调用完成')
+        
+        // 监听数字人状态变化，当停止说话时清除播放状态
+        const stopWatcher = watch(() => avatarState.value, (newState) => {
+          console.log('数字人状态变化:', newState)
+          if (newState !== 'speak' && playingMessageId.value === index) {
+            console.log('数字人停止说话，清除播放状态')
+            playingMessageId.value = null
+            currentPlayingRole = null // 清除当前播放角色
+            stopWatcher() // 停止监听
+          }
+        })
+        
+        // 设置超时，防止状态监听失效
+        setTimeout(() => {
+          if (playingMessageId.value === index) {
+            console.log('播放超时，清除播放状态')
+            playingMessageId.value = null
+            currentPlayingRole = null // 清除当前播放角色
+            stopWatcher()
+          }
+        }, 60000) // 60秒超时
+      } else {
+        // 使用TTS语音：不需要连接，使用TTS播放逻辑（和立绘一样）
+        if (!appState.tts.apiKey) {
+          showToastMessage('请先在TTS设置中配置API Key', 'error')
+          return
+        }
+        
+        // 停止当前播放的音频
+        if (currentAudio) {
+          currentAudio.pause()
+          currentAudio = null
+        }
+        
+        // 获取角色TTS配置（使用角色配置或全局配置作为默认值）
+        const ttsConfig = {
+          provider: role.ttsProvider || appState.tts.provider || 'doubao',
+          apiKey: appState.tts.apiKey,
+          voice: role.ttsVoice || 'BV700_streaming', // 默认音色（灿灿）
+          speed: role.ttsSpeed ?? appState.tts.speed ?? 1.0,
+          volume: role.ttsVolume ?? appState.tts.volume ?? 1.0
+        }
+        
+        // 确认使用对应角色的设置
+        console.log('使用角色TTS配置:', {
+          角色: role.name || role.user,
+          角色类型: role.type,
+          消息角色: message.role,
+          音色: ttsConfig.voice,
+          语速: ttsConfig.speed,
+          音量: ttsConfig.volume,
+          角色音色配置: role.ttsVoice || '(使用默认)',
+          角色语速配置: role.ttsSpeed !== undefined ? role.ttsSpeed : '(使用全局)',
+          角色音量配置: role.ttsVolume !== undefined ? role.ttsVolume : '(使用全局)'
+        })
+        
+        // 调用TTS服务
+        const ttsService = TtsServiceFactory.create(ttsConfig.provider)
+        const audioData = await ttsService.synthesize(content.trim(), ttsConfig)
+        
+        // 播放音频
+        await playAudio(audioData, index, ttsConfig.volume)
+      }
     } else if (role.type === 'illustration') {
       // 立绘：使用豆包TTS
       if (!appState.tts.apiKey) {
@@ -2253,7 +2346,7 @@ async function playMessageAudio(message: ChatMessage, index: number) {
       const audioData = await ttsService.synthesize(content.trim(), ttsConfig)
       
       // 播放音频
-      await playAudio(audioData, index)
+      await playAudio(audioData, index, ttsConfig.volume)
     } else {
       showToastMessage('未知的角色类型', 'error')
       return
@@ -2266,7 +2359,7 @@ async function playMessageAudio(message: ChatMessage, index: number) {
 }
 
 // 播放音频（用于立绘TTS）
-async function playAudio(audioData: ArrayBuffer, messageIndex: number) {
+async function playAudio(audioData: ArrayBuffer, messageIndex: number, volume?: number) {
   // 停止当前播放
   if (currentAudio) {
     currentAudio.pause()
@@ -2277,6 +2370,11 @@ async function playAudio(audioData: ArrayBuffer, messageIndex: number) {
   const blob = new Blob([audioData], { type: 'audio/mpeg' })
   const url = URL.createObjectURL(blob)
   const audio = new Audio(url)
+  
+  // 设置音量（如果提供）
+  if (volume !== undefined) {
+    audio.volume = volume
+  }
   
   // 设置播放状态
   playingMessageId.value = messageIndex
@@ -2696,7 +2794,7 @@ async function handleConnectUserRole() {
       ttsSpeed: userRoleForm.value.ttsSpeed || 1.0,
       ttsVolume: userRoleForm.value.ttsVolume || 1.0,
       ttsPreviewText: userRoleForm.value.ttsPreviewText || '',
-      enableVoicePlay: userRoleForm.value.enableVoicePlay !== undefined ? userRoleForm.value.enableVoicePlay : true,
+      enableVoicePlay: userRoleForm.value.enableVoicePlay !== undefined ? userRoleForm.value.enableVoicePlay : false,
       enableAutoPlay: userRoleForm.value.enableAutoPlay !== undefined ? userRoleForm.value.enableAutoPlay : false,
       enableAutoSwitch: userRoleForm.value.enableAutoSwitch !== undefined ? userRoleForm.value.enableAutoSwitch : false,
       isCurrent: false,
@@ -2804,7 +2902,7 @@ async function handleConnectPartnerRole() {
       ttsVoice: roleForm.value.ttsVoice || '',
       ttsSpeed: roleForm.value.ttsSpeed || 1.0,
       ttsVolume: roleForm.value.ttsVolume || 1.0,
-      enableVoicePlay: roleForm.value.enableVoicePlay !== undefined ? roleForm.value.enableVoicePlay : true,
+      enableVoicePlay: roleForm.value.enableVoicePlay !== undefined ? roleForm.value.enableVoicePlay : false,
       enableAutoPlay: roleForm.value.enableAutoPlay !== undefined ? roleForm.value.enableAutoPlay : false,
       enableAutoSwitch: roleForm.value.enableAutoSwitch !== undefined ? roleForm.value.enableAutoSwitch : false,
       isConnecting: false,
@@ -4001,7 +4099,7 @@ async function handleApiKeyLogin() {
         ttsSpeed: 1.0,
         ttsVolume: 1.0,
         ttsPreviewText: '欢迎来到AI伴侣小世界！这是一个智能对话平台，支持数字人和立绘两种角色类型，可以与AI进行自然流畅的对话交流。',
-        enableVoicePlay: true,
+        enableVoicePlay: false,
         enableAutoPlay: false,
         enableAutoSwitch: false,
         useDigitalHumanVoice: true
@@ -4068,7 +4166,7 @@ async function handleLogin() {
         ttsSpeed: 1.0,
         ttsVolume: 1.0,
         ttsPreviewText: '欢迎来到AI伴侣小世界！这是一个智能对话平台，支持数字人和立绘两种角色类型，可以与AI进行自然流畅的对话交流。',
-        enableVoicePlay: true,
+        enableVoicePlay: false,
         enableAutoPlay: false,
         enableAutoSwitch: false,
         useDigitalHumanVoice: true
@@ -4203,10 +4301,12 @@ async function loadUserRoles() {
 // 创建用户角色
 function handleCreateUserRole() {
   editingUserRole.value = null
+  const defaultType = 'illustration' as 'digital_human' | 'illustration'
+  const defaultUseDigitalHumanVoice = true
   userRoleForm.value = {
     user: '',
     name: '',
-    type: 'illustration',
+    type: defaultType,
     avatar: '',
     positionX: 20,
     positionY: 50,
@@ -4215,13 +4315,13 @@ function handleCreateUserRole() {
     model: '',
     avatarAppId: '',
     avatarAppSecret: '',
-    useDigitalHumanVoice: true,
+    useDigitalHumanVoice: defaultUseDigitalHumanVoice,
         ttsProvider: 'doubao',
         ttsVoice: '',
         ttsSpeed: appState.tts.speed ?? 1.0,
         ttsVolume: appState.tts.volume ?? 1.0,
         ttsPreviewText: '欢迎来到AI伴侣小世界！这是一个智能对话平台，支持数字人和立绘两种角色类型，可以与AI进行自然流畅的对话交流。',
-        enableVoicePlay: true,
+        enableVoicePlay: false,
         enableAutoPlay: false,
         enableAutoSwitch: false
       }
@@ -4249,7 +4349,7 @@ function handleEditUserRole(role: UserRole) {
     ttsSpeed: role.ttsSpeed !== undefined ? role.ttsSpeed : (appState.tts.speed ?? 1.0),
     ttsVolume: role.ttsVolume !== undefined ? role.ttsVolume : (appState.tts.volume ?? 1.0),
     ttsPreviewText: (role as any).ttsPreviewText || '欢迎来到AI伴侣小世界！这是一个智能对话平台，支持数字人和立绘两种角色类型，可以与AI进行自然流畅的对话交流。',
-    enableVoicePlay: role.enableVoicePlay !== undefined ? role.enableVoicePlay : true,
+    enableVoicePlay: role.enableVoicePlay !== undefined ? role.enableVoicePlay : false,
     enableAutoPlay: role.enableAutoPlay !== undefined ? role.enableAutoPlay : false,
     enableAutoSwitch: role.enableAutoSwitch !== undefined ? role.enableAutoSwitch : false
   }
@@ -4280,7 +4380,9 @@ async function handleSaveUserRole() {
     const hadRolesBefore = userRoles.value.length > 0
     let createdRoleId: number | null = null
     
-    if (editingUserRole.value) {
+    // 判断是创建还是编辑：如果 editingUserRole.value 存在且 id > 0，才是编辑模式
+    // 如果 id === 0，说明是创建新角色时连接数字人创建的临时对象，应该按创建模式处理
+    if (editingUserRole.value && editingUserRole.value.id > 0) {
       // 更新用户角色
       const oldRole = userRoles.value.find(r => r.id === editingUserRole.value!.id)
       const typeChanged = oldRole?.type !== userRoleForm.value.type
@@ -4318,11 +4420,12 @@ async function handleSaveUserRole() {
           model: userRoleForm.value.model.trim() || undefined,
           avatarAppId: userRoleForm.value.avatarAppId && userRoleForm.value.avatarAppId.trim() ? userRoleForm.value.avatarAppId.trim() : undefined,
           avatarAppSecret: userRoleForm.value.avatarAppSecret && userRoleForm.value.avatarAppSecret.trim() ? userRoleForm.value.avatarAppSecret.trim() : undefined,
-          ttsProvider: userRoleForm.value.ttsProvider || undefined,
-          ttsVoice: userRoleForm.value.ttsVoice || undefined,
+          useDigitalHumanVoice: userRoleForm.value.useDigitalHumanVoice !== undefined ? userRoleForm.value.useDigitalHumanVoice : undefined,
+          ttsProvider: userRoleForm.value.ttsProvider !== undefined && userRoleForm.value.ttsProvider !== null && userRoleForm.value.ttsProvider !== '' ? userRoleForm.value.ttsProvider : undefined,
+          ttsVoice: userRoleForm.value.ttsVoice !== undefined && userRoleForm.value.ttsVoice !== null && userRoleForm.value.ttsVoice !== '' ? userRoleForm.value.ttsVoice : undefined,
           ttsSpeed: userRoleForm.value.ttsSpeed !== undefined ? userRoleForm.value.ttsSpeed : undefined,
           ttsVolume: userRoleForm.value.ttsVolume !== undefined ? userRoleForm.value.ttsVolume : undefined,
-          ttsPreviewText: userRoleForm.value.ttsPreviewText || undefined,
+          ttsPreviewText: userRoleForm.value.ttsPreviewText !== undefined && userRoleForm.value.ttsPreviewText !== null && userRoleForm.value.ttsPreviewText !== '' ? userRoleForm.value.ttsPreviewText : undefined,
           enableVoicePlay: userRoleForm.value.enableVoicePlay !== undefined ? userRoleForm.value.enableVoicePlay : undefined,
           enableAutoPlay: userRoleForm.value.enableAutoPlay !== undefined ? userRoleForm.value.enableAutoPlay : undefined,
           enableAutoSwitch: userRoleForm.value.enableAutoSwitch !== undefined ? userRoleForm.value.enableAutoSwitch : undefined
@@ -4373,11 +4476,11 @@ async function handleSaveUserRole() {
           avatarAppId: userRoleForm.value.avatarAppId && userRoleForm.value.avatarAppId.trim() ? userRoleForm.value.avatarAppId.trim() : undefined,
           avatarAppSecret: userRoleForm.value.avatarAppSecret && userRoleForm.value.avatarAppSecret.trim() ? userRoleForm.value.avatarAppSecret.trim() : undefined,
           useDigitalHumanVoice: userRoleForm.value.useDigitalHumanVoice !== undefined ? userRoleForm.value.useDigitalHumanVoice : undefined,
-          ttsProvider: userRoleForm.value.ttsProvider || undefined,
-          ttsVoice: userRoleForm.value.ttsVoice || undefined,
+          ttsProvider: userRoleForm.value.ttsProvider !== undefined && userRoleForm.value.ttsProvider !== null && userRoleForm.value.ttsProvider !== '' ? userRoleForm.value.ttsProvider : undefined,
+          ttsVoice: userRoleForm.value.ttsVoice !== undefined && userRoleForm.value.ttsVoice !== null && userRoleForm.value.ttsVoice !== '' ? userRoleForm.value.ttsVoice : undefined,
           ttsSpeed: userRoleForm.value.ttsSpeed !== undefined ? userRoleForm.value.ttsSpeed : undefined,
           ttsVolume: userRoleForm.value.ttsVolume !== undefined ? userRoleForm.value.ttsVolume : undefined,
-          ttsPreviewText: userRoleForm.value.ttsPreviewText || undefined,
+          ttsPreviewText: userRoleForm.value.ttsPreviewText !== undefined && userRoleForm.value.ttsPreviewText !== null && userRoleForm.value.ttsPreviewText !== '' ? userRoleForm.value.ttsPreviewText : undefined,
           enableVoicePlay: userRoleForm.value.enableVoicePlay !== undefined ? userRoleForm.value.enableVoicePlay : undefined,
           enableAutoPlay: userRoleForm.value.enableAutoPlay !== undefined ? userRoleForm.value.enableAutoPlay : undefined,
           enableAutoSwitch: userRoleForm.value.enableAutoSwitch !== undefined ? userRoleForm.value.enableAutoSwitch : undefined
@@ -4418,6 +4521,11 @@ async function handleSaveUserRole() {
           await activateUserRole(updatedRole)
         }
       }
+    }
+    
+    // 清理临时对象（如果是创建新角色时连接数字人创建的临时对象）
+    if (editingUserRole.value && editingUserRole.value.id === 0) {
+      editingUserRole.value = null
     }
     
     showUserRoleEditForm.value = false
@@ -5206,10 +5314,12 @@ async function getAndSetCurrentPartnerRole() {
 function handleCreateRole() {
   editingRole.value = null
   // 创建时默认使用当前用户角色的模型名称和 API Key
+  const defaultType = 'illustration' as 'digital_human' | 'illustration'
+  const defaultUseDigitalHumanVoice = true
   roleForm.value = {
     name: '',
     user: '',
-    type: 'illustration',
+    type: defaultType,
     description: '',
     avatar: '',
     positionX: 80,
@@ -5220,13 +5330,13 @@ function handleCreateRole() {
     apiKey: globalApiKey.value || '', // 默认使用当前登录的 API Key
     avatarAppId: '',
     avatarAppSecret: '',
-    useDigitalHumanVoice: true,
+    useDigitalHumanVoice: defaultUseDigitalHumanVoice,
     ttsProvider: 'doubao',
     ttsVoice: '',
     ttsSpeed: appState.tts.speed ?? 1.0,
     ttsVolume: appState.tts.volume ?? 1.0,
     ttsPreviewText: '欢迎来到AI伴侣小世界！这是一个智能对话平台，支持数字人和立绘两种角色类型，可以与AI进行自然流畅的对话交流。',
-    enableVoicePlay: true,
+    enableVoicePlay: false,
     enableAutoPlay: false,
     enableAutoSwitch: false
   }
@@ -5255,7 +5365,7 @@ function handleEditRole(role: Role) {
     ttsSpeed: role.ttsSpeed !== undefined ? role.ttsSpeed : (appState.tts.speed ?? 1.0),
     ttsVolume: role.ttsVolume !== undefined ? role.ttsVolume : (appState.tts.volume ?? 1.0),
     ttsPreviewText: (role as any).ttsPreviewText || '欢迎来到AI伴侣小世界！这是一个智能对话平台，支持数字人和立绘两种角色类型，可以与AI进行自然流畅的对话交流。',
-    enableVoicePlay: role.enableVoicePlay !== undefined ? role.enableVoicePlay : true,
+    enableVoicePlay: role.enableVoicePlay !== undefined ? role.enableVoicePlay : false,
     enableAutoPlay: role.enableAutoPlay !== undefined ? role.enableAutoPlay : false,
     enableAutoSwitch: role.enableAutoSwitch !== undefined ? role.enableAutoSwitch : false
   }
@@ -5281,7 +5391,9 @@ async function handleSaveRole() {
       ? (editingRole.value.baseURL || appState.currentUserRole?.baseURL || undefined)
       : (appState.currentUserRole?.baseURL || undefined)
     
-    if (editingRole.value) {
+    // 判断是创建还是编辑：如果 editingRole.value 存在且 id > 0，才是编辑模式
+    // 如果 id === 0，说明是创建新角色时连接数字人创建的临时对象，应该按创建模式处理
+    if (editingRole.value && editingRole.value.id > 0) {
       // 更新角色
       const oldRole = roles.value.find(r => r.id === editingRole.value!.id)
       const typeChanged = oldRole?.type !== roleForm.value.type
@@ -5321,10 +5433,12 @@ async function handleSaveRole() {
           apiKey: globalApiKey.value, // 使用当前登录的 API Key
           avatarAppId: roleForm.value.avatarAppId && roleForm.value.avatarAppId.trim() ? roleForm.value.avatarAppId.trim() : undefined,
           avatarAppSecret: roleForm.value.avatarAppSecret && roleForm.value.avatarAppSecret.trim() ? roleForm.value.avatarAppSecret.trim() : undefined,
-          ttsProvider: roleForm.value.ttsProvider || undefined,
-          ttsVoice: roleForm.value.ttsVoice || undefined,
+          useDigitalHumanVoice: roleForm.value.useDigitalHumanVoice !== undefined ? roleForm.value.useDigitalHumanVoice : undefined,
+          ttsProvider: roleForm.value.ttsProvider !== undefined && roleForm.value.ttsProvider !== null && roleForm.value.ttsProvider !== '' ? roleForm.value.ttsProvider : undefined,
+          ttsVoice: roleForm.value.ttsVoice !== undefined && roleForm.value.ttsVoice !== null && roleForm.value.ttsVoice !== '' ? roleForm.value.ttsVoice : undefined,
           ttsSpeed: roleForm.value.ttsSpeed !== undefined ? roleForm.value.ttsSpeed : undefined,
           ttsVolume: roleForm.value.ttsVolume !== undefined ? roleForm.value.ttsVolume : undefined,
+          ttsPreviewText: roleForm.value.ttsPreviewText !== undefined && roleForm.value.ttsPreviewText !== null && roleForm.value.ttsPreviewText !== '' ? roleForm.value.ttsPreviewText : undefined,
           enableVoicePlay: roleForm.value.enableVoicePlay !== undefined ? roleForm.value.enableVoicePlay : undefined,
           enableAutoPlay: roleForm.value.enableAutoPlay !== undefined ? roleForm.value.enableAutoPlay : undefined,
           enableAutoSwitch: roleForm.value.enableAutoSwitch !== undefined ? roleForm.value.enableAutoSwitch : undefined
@@ -5376,10 +5490,12 @@ async function handleSaveRole() {
           apiKey: globalApiKey.value, // 使用当前登录的 API Key
           avatarAppId: roleForm.value.avatarAppId && roleForm.value.avatarAppId.trim() ? roleForm.value.avatarAppId.trim() : undefined,
           avatarAppSecret: roleForm.value.avatarAppSecret && roleForm.value.avatarAppSecret.trim() ? roleForm.value.avatarAppSecret.trim() : undefined,
-          ttsProvider: roleForm.value.ttsProvider || undefined,
-          ttsVoice: roleForm.value.ttsVoice || undefined,
+          useDigitalHumanVoice: roleForm.value.useDigitalHumanVoice !== undefined ? roleForm.value.useDigitalHumanVoice : undefined,
+          ttsProvider: roleForm.value.ttsProvider !== undefined && roleForm.value.ttsProvider !== null && roleForm.value.ttsProvider !== '' ? roleForm.value.ttsProvider : undefined,
+          ttsVoice: roleForm.value.ttsVoice !== undefined && roleForm.value.ttsVoice !== null && roleForm.value.ttsVoice !== '' ? roleForm.value.ttsVoice : undefined,
           ttsSpeed: roleForm.value.ttsSpeed !== undefined ? roleForm.value.ttsSpeed : undefined,
           ttsVolume: roleForm.value.ttsVolume !== undefined ? roleForm.value.ttsVolume : undefined,
+          ttsPreviewText: roleForm.value.ttsPreviewText !== undefined && roleForm.value.ttsPreviewText !== null && roleForm.value.ttsPreviewText !== '' ? roleForm.value.ttsPreviewText : undefined,
           enableVoicePlay: roleForm.value.enableVoicePlay !== undefined ? roleForm.value.enableVoicePlay : undefined,
           enableAutoPlay: roleForm.value.enableAutoPlay !== undefined ? roleForm.value.enableAutoPlay : undefined,
           enableAutoSwitch: roleForm.value.enableAutoSwitch !== undefined ? roleForm.value.enableAutoSwitch : undefined
@@ -5411,6 +5527,11 @@ async function handleSaveRole() {
         updateSpeakerList()
         console.log('自动设置第一个伙伴角色为当前:', appState.llm.user)
       }
+    }
+    
+    // 清理临时对象（如果是创建新角色时连接数字人创建的临时对象）
+    if (editingRole.value && editingRole.value.id === 0) {
+      editingRole.value = null
     }
     
     showRoleEditForm.value = false

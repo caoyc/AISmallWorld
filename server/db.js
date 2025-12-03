@@ -662,10 +662,14 @@ export function createRole(apiKey, name, user, type = 'illustration', descriptio
     apiKey: apiKey || null,
     avatarAppId: avatarAppId || null,
     avatarAppSecret: avatarAppSecret || null,
+    useDigitalHumanVoice: true,
     ttsProvider: 'doubao',
     ttsVoice: null,
     ttsSpeed: 1.0,
     ttsVolume: 1.0,
+    enableVoicePlay: true,
+    enableAutoPlay: false,
+    enableAutoSwitch: false,
     createdAt: now,
     updatedAt: now
   }
@@ -828,6 +832,14 @@ export function updateRole(id, apiKey, updates) {
     apiKey: role.api_key || null,
     avatarAppId: role.avatar_app_id || null,
     avatarAppSecret: role.avatar_app_secret || null,
+    useDigitalHumanVoice: role.use_digital_human_voice !== null && role.use_digital_human_voice !== undefined ? (role.use_digital_human_voice === 1) : undefined,
+    ttsProvider: role.tts_provider || null,
+    ttsVoice: role.tts_voice || null,
+    ttsSpeed: role.tts_speed !== null && role.tts_speed !== undefined ? role.tts_speed : undefined,
+    ttsVolume: role.tts_volume !== null && role.tts_volume !== undefined ? role.tts_volume : undefined,
+    enableVoicePlay: role.enable_voice_play !== null && role.enable_voice_play !== undefined ? (role.enable_voice_play === 1) : undefined,
+    enableAutoPlay: role.enable_auto_play !== null && role.enable_auto_play !== undefined ? (role.enable_auto_play === 1) : undefined,
+    enableAutoSwitch: role.enable_auto_switch !== null && role.enable_auto_switch !== undefined ? (role.enable_auto_switch === 1) : undefined,
     createdAt: role.created_at,
     updatedAt: role.updated_at
   }
@@ -870,6 +882,13 @@ export function updateRole(id, apiKey, updates) {
     avatarAppId: role.avatar_app_id || null,
     avatarAppSecret: role.avatar_app_secret || null,
     useDigitalHumanVoice: role.use_digital_human_voice !== null && role.use_digital_human_voice !== undefined ? (role.use_digital_human_voice === 1) : undefined,
+    ttsProvider: role.tts_provider || null,
+    ttsVoice: role.tts_voice || null,
+    ttsSpeed: role.tts_speed !== null && role.tts_speed !== undefined ? role.tts_speed : undefined,
+    ttsVolume: role.tts_volume !== null && role.tts_volume !== undefined ? role.tts_volume : undefined,
+    enableVoicePlay: role.enable_voice_play !== null && role.enable_voice_play !== undefined ? (role.enable_voice_play === 1) : undefined,
+    enableAutoPlay: role.enable_auto_play !== null && role.enable_auto_play !== undefined ? (role.enable_auto_play === 1) : undefined,
+    enableAutoSwitch: role.enable_auto_switch !== null && role.enable_auto_switch !== undefined ? (role.enable_auto_switch === 1) : undefined,
     createdAt: role.created_at,
     updatedAt: role.updated_at
   }
@@ -915,6 +934,9 @@ export function getUserRoles(apiKey) {
     ttsSpeed: role.tts_speed !== null && role.tts_speed !== undefined ? role.tts_speed : undefined,
     ttsVolume: role.tts_volume !== null && role.tts_volume !== undefined ? role.tts_volume : undefined,
     ttsPreviewText: role.tts_preview_text || null,
+    enableVoicePlay: role.enable_voice_play !== null && role.enable_voice_play !== undefined ? (role.enable_voice_play === 1) : undefined,
+    enableAutoPlay: role.enable_auto_play !== null && role.enable_auto_play !== undefined ? (role.enable_auto_play === 1) : undefined,
+    enableAutoSwitch: role.enable_auto_switch !== null && role.enable_auto_switch !== undefined ? (role.enable_auto_switch === 1) : undefined,
     isCurrent: role.is_current === 1,
     createdAt: role.created_at,
     updatedAt: role.updated_at
@@ -1130,6 +1152,10 @@ export function updateUserRole(id, apiKey, updates) {
       ttsVoice: role.tts_voice || null,
       ttsSpeed: role.tts_speed !== null && role.tts_speed !== undefined ? role.tts_speed : undefined,
       ttsVolume: role.tts_volume !== null && role.tts_volume !== undefined ? role.tts_volume : undefined,
+      ttsPreviewText: role.tts_preview_text || null,
+      enableVoicePlay: role.enable_voice_play !== null && role.enable_voice_play !== undefined ? (role.enable_voice_play === 1) : undefined,
+      enableAutoPlay: role.enable_auto_play !== null && role.enable_auto_play !== undefined ? (role.enable_auto_play === 1) : undefined,
+      enableAutoSwitch: role.enable_auto_switch !== null && role.enable_auto_switch !== undefined ? (role.enable_auto_switch === 1) : undefined,
       isCurrent: role.is_current === 1,
       createdAt: role.created_at,
       updatedAt: role.updated_at
@@ -1168,18 +1194,22 @@ export function updateUserRole(id, apiKey, updates) {
     scale: role.scale !== null && role.scale !== undefined ? role.scale : undefined,
     baseURL: role.base_url || null,
     model: role.model || null,
-    avatarAppId: role.avatar_app_id || null,
-    avatarAppSecret: role.avatar_app_secret || null,
-    ttsProvider: role.tts_provider || null,
-    ttsVoice: role.tts_voice || null,
-    ttsSpeed: role.tts_speed !== null && role.tts_speed !== undefined ? role.tts_speed : undefined,
-    ttsVolume: role.tts_volume !== null && role.tts_volume !== undefined ? role.tts_volume : undefined,
-    ttsPreviewText: role.tts_preview_text || null,
-    isCurrent: role.is_current === 1,
-    createdAt: role.created_at,
-    updatedAt: role.updated_at
+      avatarAppId: role.avatar_app_id || null,
+      avatarAppSecret: role.avatar_app_secret || null,
+      useDigitalHumanVoice: role.use_digital_human_voice !== null && role.use_digital_human_voice !== undefined ? (role.use_digital_human_voice === 1) : undefined,
+      ttsProvider: role.tts_provider || null,
+      ttsVoice: role.tts_voice || null,
+      ttsSpeed: role.tts_speed !== null && role.tts_speed !== undefined ? role.tts_speed : undefined,
+      ttsVolume: role.tts_volume !== null && role.tts_volume !== undefined ? role.tts_volume : undefined,
+      ttsPreviewText: role.tts_preview_text || null,
+      enableVoicePlay: role.enable_voice_play !== null && role.enable_voice_play !== undefined ? (role.enable_voice_play === 1) : undefined,
+      enableAutoPlay: role.enable_auto_play !== null && role.enable_auto_play !== undefined ? (role.enable_auto_play === 1) : undefined,
+      enableAutoSwitch: role.enable_auto_switch !== null && role.enable_auto_switch !== undefined ? (role.enable_auto_switch === 1) : undefined,
+      isCurrent: role.is_current === 1,
+      createdAt: role.created_at,
+      updatedAt: role.updated_at
+    }
   }
-}
 
 // 删除用户角色
 export function deleteUserRole(id, apiKey) {
