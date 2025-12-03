@@ -5,6 +5,7 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
+    open: true, // 在外部浏览器中打开
     fs: {
       // 排除 SillyTavern 目录，避免依赖扫描错误
       deny: ['**/SillyTavern/**']

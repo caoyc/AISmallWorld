@@ -1713,7 +1713,10 @@
       </div>
     </div>
     
-    <!-- 裁剪弹窗 -->
+  </div>
+  
+  <!-- 裁剪弹窗 - 使用 Teleport 传送到 body，避免层级限制 -->
+  <Teleport to="body">
     <div v-if="showCropModal" class="crop-modal-overlay" @click.self="closeCropModal">
       <div class="crop-modal">
       <div class="crop-modal-header">
@@ -1731,8 +1734,7 @@
         </div>
       </div>
     </div>
-    
-  </div>
+  </Teleport>
   
   <!-- 魔珐数字人邀请码模态框 -->
   <div v-if="showMofaInviteCodeModal" class="modal-overlay" @click.self="showMofaInviteCodeModal = false">
@@ -1751,9 +1753,9 @@
           style="max-width: 100%; height: auto; border: 1px solid #ddd; border-radius: 8px;"
           @error="handleQrCodeImageError"
         />
+        </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -3781,7 +3783,7 @@ async function handleDownloadBackground(background: Background) {
         document.body.removeChild(link)
         URL.revokeObjectURL(blobUrl)
       }, 100)
-    } else {
+  } else {
       // 同源URL直接下载
   const link = document.createElement('a')
   link.href = url
@@ -3827,9 +3829,9 @@ async function handleUploadBackground(event: Event) {
   const file = input.files?.[0]
   
     if (!file) {
-      return
-    }
-    
+    return
+  }
+  
   if (!globalApiKey.value) {
     showToastMessage('请先登录', 'error')
     return
@@ -4197,7 +4199,7 @@ async function handleSaveUserRole() {
     showToastMessage('请先登录', 'error')
       return
     }
-  
+    
   // 验证user字段必填
   if (!userRoleForm.value.user || !userRoleForm.value.user.trim()) {
     showToastMessage('user字段不能为空', 'error')
@@ -4373,9 +4375,9 @@ async function handleSaveUserRole() {
 // 删除用户角色
 async function handleDeleteUserRole(role: UserRole) {
   if (!confirm(`确定要删除用户角色"${role.name || '(未命名)'}"吗？`)) {
-    return
-  }
-  
+          return
+        }
+        
   try {
     const userRoleId = `user:${role.id}`
     const renderer = rendererManager.getRenderer(userRoleId)
@@ -4426,7 +4428,7 @@ async function handleSetCurrentUserRole(role: UserRole) {
     const roleInList = userRoles.value.find(r => r.id === role.id)
     if (roleInList) {
       appState.currentUserRole = roleInList
-    } else {
+        } else {
       appState.currentUserRole = role
     }
     
@@ -4449,7 +4451,7 @@ async function handleSetCurrentUserRole(role: UserRole) {
     // 时机3：切换当前角色时更新说话人列表
     updateSpeakerList()
     showToastMessage(`已切换到用户角色"${role.name || '(未命名)'}"`, 'success')
-  } catch (error) {
+      } catch (error) {
     showToastMessage((error as Error).message, 'error')
   }
 }
@@ -4825,7 +4827,10 @@ async function deactivatePartnerDigitalHuman(role: Role) {
 
 // 保存 TTS 和 ASR 设置
 function handleSaveTtsAsrSettings() {
-  handleSaveConfig()
+  const success = handleSaveConfig(true)
+  if (success) {
+    showTtsAsrSettingsModal.value = false
+  }
 }
 
 // TTS设置页试听音色（toggle播放/停止）
@@ -4853,7 +4858,7 @@ async function previewTtsVoice() {
     showToastMessage('请输入试听文本', 'error')
     return
   }
-  
+
   try {
     console.log('开始TTS试听:', {
       voice: ttsPreviewVoice.value,
@@ -4903,7 +4908,7 @@ async function previewTtsVoice() {
       await audio.play()
       isTtsPreviewPlaying.value = true
       console.log('音频播放成功')
-    } catch (error) {
+  } catch (error) {
       console.error('试听播放失败:', error)
       URL.revokeObjectURL(url)
       ttsPreviewAudio.value = null
@@ -5327,7 +5332,14 @@ async function handleSaveRole() {
       if (!appState.llm.user) {
         appState.llm.user = roleForm.value.user.trim()
         appState.currentPartnerRole = newRole
+        // 激活新创建的伙伴角色
+        await activatePartnerRole(newRole)
         handleSaveConfig()
+        // 触发角色更新事件
+        const event = new CustomEvent('roleUpdated')
+        window.dispatchEvent(event)
+        // 更新说话人列表
+        updateSpeakerList()
         console.log('自动设置第一个伙伴角色为当前:', appState.llm.user)
       }
     }
@@ -7067,7 +7079,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 10001;
 }
 
 .crop-modal {

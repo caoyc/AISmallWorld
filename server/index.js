@@ -332,7 +332,7 @@ app.get('/api/roles', async (req, res) => {
 // 创建角色
 app.post('/api/roles', async (req, res) => {
   try {
-    const { apiKey, name, user, type, description, avatar, positionX, positionY, scale, baseURL, model, avatarAppId, avatarAppSecret, ttsProvider, ttsVoice, ttsSpeed, ttsVolume } = req.body
+    const { apiKey, name, user, type, description, avatar, positionX, positionY, scale, baseURL, model, avatarAppId, avatarAppSecret, useDigitalHumanVoice, ttsProvider, ttsVoice, ttsSpeed, ttsVolume, enableVoicePlay, enableAutoPlay, enableAutoSwitch } = req.body
     
     if (!apiKey || !apiKey.trim()) {
       return res.status(400).json({ error: 'apiKey is required' })
@@ -350,13 +350,16 @@ app.post('/api/roles', async (req, res) => {
     const role = createRole(apiKey, name, user, roleType, description, avatar, positionX, positionY, scale, baseURL, model, avatarAppId, avatarAppSecret)
     
     // 如果提供了语音选项或TTS字段，更新角色
-    if (useDigitalHumanVoice !== undefined || ttsProvider !== undefined || ttsVoice !== undefined || ttsSpeed !== undefined || ttsVolume !== undefined) {
+    if (useDigitalHumanVoice !== undefined || ttsProvider !== undefined || ttsVoice !== undefined || ttsSpeed !== undefined || ttsVolume !== undefined || enableVoicePlay !== undefined || enableAutoPlay !== undefined || enableAutoSwitch !== undefined) {
       const updates = {}
       if (useDigitalHumanVoice !== undefined) updates.useDigitalHumanVoice = useDigitalHumanVoice
       if (ttsProvider !== undefined) updates.ttsProvider = ttsProvider
       if (ttsVoice !== undefined) updates.ttsVoice = ttsVoice
       if (ttsSpeed !== undefined) updates.ttsSpeed = ttsSpeed
       if (ttsVolume !== undefined) updates.ttsVolume = ttsVolume
+      if (enableVoicePlay !== undefined) updates.enableVoicePlay = enableVoicePlay
+      if (enableAutoPlay !== undefined) updates.enableAutoPlay = enableAutoPlay
+      if (enableAutoSwitch !== undefined) updates.enableAutoSwitch = enableAutoSwitch
       const updatedRole = updateRole(role.id, apiKey, updates)
       res.json({ success: true, data: updatedRole })
     } else {
@@ -399,6 +402,7 @@ app.put('/api/roles/:id', async (req, res) => {
     if (model !== undefined) updates.model = model
     if (avatarAppId !== undefined) updates.avatarAppId = avatarAppId
     if (avatarAppSecret !== undefined) updates.avatarAppSecret = avatarAppSecret
+    if (useDigitalHumanVoice !== undefined) updates.useDigitalHumanVoice = useDigitalHumanVoice
     if (ttsProvider !== undefined) updates.ttsProvider = ttsProvider
     if (ttsVoice !== undefined) updates.ttsVoice = ttsVoice
     if (ttsSpeed !== undefined) updates.ttsSpeed = ttsSpeed
@@ -464,7 +468,7 @@ app.get('/api/user-roles', async (req, res) => {
 // 创建用户角色
 app.post('/api/user-roles', async (req, res) => {
   try {
-    const { apiKey, user, name, type, avatar, positionX, positionY, scale, baseURL, model, avatarAppId, avatarAppSecret, ttsProvider, ttsVoice, ttsSpeed, ttsVolume, ttsPreviewText } = req.body
+    const { apiKey, user, name, type, avatar, positionX, positionY, scale, baseURL, model, avatarAppId, avatarAppSecret, useDigitalHumanVoice, ttsProvider, ttsVoice, ttsSpeed, ttsVolume, ttsPreviewText, enableVoicePlay, enableAutoPlay, enableAutoSwitch } = req.body
     
     if (!apiKey || !apiKey.trim()) {
       return res.status(400).json({ error: 'apiKey is required' })
@@ -477,7 +481,7 @@ app.post('/api/user-roles', async (req, res) => {
     const role = createUserRole(apiKey, user, name, type, avatar, positionX, positionY, scale, baseURL, model, avatarAppId, avatarAppSecret)
     
     // 如果提供了语音选项或TTS字段，更新角色
-    if (useDigitalHumanVoice !== undefined || ttsProvider !== undefined || ttsVoice !== undefined || ttsSpeed !== undefined || ttsVolume !== undefined || ttsPreviewText !== undefined) {
+    if (useDigitalHumanVoice !== undefined || ttsProvider !== undefined || ttsVoice !== undefined || ttsSpeed !== undefined || ttsVolume !== undefined || ttsPreviewText !== undefined || enableVoicePlay !== undefined || enableAutoPlay !== undefined || enableAutoSwitch !== undefined) {
       const updates = {}
       if (useDigitalHumanVoice !== undefined) updates.useDigitalHumanVoice = useDigitalHumanVoice
       if (ttsProvider !== undefined) updates.ttsProvider = ttsProvider
@@ -485,6 +489,9 @@ app.post('/api/user-roles', async (req, res) => {
       if (ttsSpeed !== undefined) updates.ttsSpeed = ttsSpeed
       if (ttsVolume !== undefined) updates.ttsVolume = ttsVolume
       if (ttsPreviewText !== undefined) updates.ttsPreviewText = ttsPreviewText
+      if (enableVoicePlay !== undefined) updates.enableVoicePlay = enableVoicePlay
+      if (enableAutoPlay !== undefined) updates.enableAutoPlay = enableAutoPlay
+      if (enableAutoSwitch !== undefined) updates.enableAutoSwitch = enableAutoSwitch
       const updatedRole = updateUserRole(role.id, apiKey, updates)
       res.json({ success: true, data: updatedRole })
     } else {
@@ -524,6 +531,7 @@ app.put('/api/user-roles/:id', async (req, res) => {
     if (model !== undefined) updates.model = model
     if (avatarAppId !== undefined) updates.avatarAppId = avatarAppId
     if (avatarAppSecret !== undefined) updates.avatarAppSecret = avatarAppSecret
+    if (useDigitalHumanVoice !== undefined) updates.useDigitalHumanVoice = useDigitalHumanVoice
     if (ttsProvider !== undefined) updates.ttsProvider = ttsProvider
     if (ttsVoice !== undefined) updates.ttsVoice = ttsVoice
     if (ttsSpeed !== undefined) updates.ttsSpeed = ttsSpeed
