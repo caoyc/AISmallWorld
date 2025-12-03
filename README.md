@@ -97,8 +97,8 @@ npm run build
 ### 3. 数字人配置
 
 创建数字人角色时需要配置：
-- **App ID**: 魔珐星云SDK的应用ID
-- **App Secret**: 魔珐星云SDK的应用密钥
+- **App ID**: 魔珐星云SDK的应用ID（[获取APP ID和Secret](https://c.c1nd.cn/9C9WW)）
+- **App Secret**: 魔珐星云SDK的应用密钥（[获取APP ID和Secret](https://c.c1nd.cn/9C9WW)）
 - **图片URL**: 数字人的图片资源URL
 
 > 💡 获取魔珐数字人邀请码：在菜单中点击"获取魔珐数字人邀请码"，扫描二维码添加微信好友获取。

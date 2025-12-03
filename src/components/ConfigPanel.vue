@@ -610,7 +610,7 @@
             <div v-if="roleForm.type === 'digital_human'">
               <div class="config-divider"></div>
               <div class="config-section">
-                <h4 class="section-title">虚拟人 SDK 配置</h4>
+                <h4 class="section-title">数字人SDK配置(<a href="https://c.c1nd.cn/9C9WW" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: none;">魔珐星云</a>)</h4>
                 <div class="form-group">
                   <label for="role-avatar-app-id">应用 APP ID:</label>
                   <input 
@@ -1214,7 +1214,7 @@
                     <!-- 数字人 SDK 配置 -->
                     <div class="config-divider" style="margin-top: 12px;"></div>
                     <div class="config-section" style="margin-top: 12px;">
-                      <h4 class="section-title">数字人 SDK 配置</h4>
+                      <h4 class="section-title">数字人SDK配置(<a href="https://c.c1nd.cn/9C9WW" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: none;">魔珐星云</a>)</h4>
                       <div class="form-group">
                         <label>应用 APP ID</label>
                         <input 
