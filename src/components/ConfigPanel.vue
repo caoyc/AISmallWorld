@@ -3,7 +3,7 @@
     <!-- 对话页面 - 全屏居中布局 -->
     <div class="chat-tab">
         <!-- 历史对话面板 -->
-        <div v-if="showHistoryPanel && globalApiKey" class="history-panel-wrapper">
+        <div v-show="showHistoryPanel && globalApiKey" class="history-panel-wrapper">
           <!-- 关闭按钮 - 放在面板外部 -->
                     <button 
             class="history-panel-close"
@@ -1791,6 +1791,7 @@ import { getUserRoles, createUserRole, updateUserRole, deleteUserRole, setCurren
 import { getBackgrounds, uploadBackground, createBackgroundFromUrl, updateBackground, deleteBackground } from '../services/backgroundManagement'
 import type { UserRole, Background } from '../types'
 import { marked } from 'marked'
+import removeMarkdown from 'remove-markdown'
 import { extractMarkdownImages, removeMarkdownImages, generateSSML, delay } from '../utils'
 import { avatarState } from '../stores/app'
 import { avatarService } from '../services/avatar'
@@ -2200,12 +2201,10 @@ async function playMessageAudio(message: ChatMessage, index: number) {
     await switchRoleDisplay(message.role as 'user' | 'assistant')
   }
   
-  // 处理消息内容：移除markdown图片标记
+  // 处理消息内容：清理所有markdown语法
   let content = message.content
-  const images = extractMarkdownImages(content)
-  if (images.length > 0) {
-    content = removeMarkdownImages(content)
-  }
+  // 使用 remove-markdown 清理所有 markdown 语法，获取纯文本用于 TTS
+  content = removeMarkdown(content)
   
   // 如果内容为空，提示用户
   if (!content || content.trim() === '') {
@@ -2618,15 +2617,8 @@ async function previewUserVoice() {
 // 复制消息内容
 async function copyMessage(content: string) {
   try {
-    // 移除markdown图片标记
-    let text = content
-    const images = extractMarkdownImages(text)
-    if (images.length > 0) {
-      text = removeMarkdownImages(text)
-    }
-    
     // 复制到剪贴板
-    await navigator.clipboard.writeText(text.trim())
+    await navigator.clipboard.writeText(content.trim())
     showToastMessage('已复制到剪贴板', 'success')
   } catch (error) {
     console.error('复制失败:', error)
@@ -2955,9 +2947,27 @@ function handleDisconnect() {
   try {
     // 根据编辑中的角色类型断开连接
     if (showUserRoleEditForm.value && editingUserRole.value) {
-      handleDisconnectUserRoleFromList(editingUserRole.value)
+      // 编辑面板中的连接是临时连接，直接断开 digitalHumanInstance
+      if (editingUserRole.value.digitalHumanInstance) {
+        avatarService.disconnect(editingUserRole.value.digitalHumanInstance)
+        editingUserRole.value.digitalHumanInstance = null
+        editingUserRole.value.isConnected = false
+        editingUserRole.value.isConnecting = false
+        showToastMessage('已断开连接', 'success')
+      } else {
+        showToastMessage('该角色未连接', 'info')
+      }
     } else if (showRoleEditForm.value && editingRole.value) {
-      handleDisconnectRoleFromList(editingRole.value)
+      // 编辑面板中的连接是临时连接，直接断开 digitalHumanInstance
+      if (editingRole.value.digitalHumanInstance) {
+        avatarService.disconnect(editingRole.value.digitalHumanInstance)
+        editingRole.value.digitalHumanInstance = null
+        editingRole.value.isConnected = false
+        editingRole.value.isConnecting = false
+        showToastMessage('已断开连接', 'success')
+      } else {
+        showToastMessage('该角色未连接', 'info')
+      }
     } else {
       showToastMessage('请先选择要断开的角色', 'error')
     }

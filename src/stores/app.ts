@@ -1,8 +1,7 @@
 import { reactive, ref } from 'vue'
-import type { AppState, UserRole, Role } from '../types'
+import type { AppState } from '../types'
 import { LLM_CONFIG, APP_CONFIG } from '../constants'
-import { validateConfig, delay, extractMarkdownImages, removeMarkdownImages } from '../utils'
-import { avatarService } from '../services/avatar'
+import { validateConfig, delay } from '../utils'
 import { llmService } from '../services/llm'
 import { saveChatMessage } from '../services/chatHistory'
 import type { ChatMessage } from '../types'
@@ -70,7 +69,7 @@ export class AppStore {
    * @throws {Error} - 当发送消息失败时抛出错误
    */
   async sendMessage(): Promise<string | undefined> {
-    const { llm, ui, avatar } = appState
+    const { llm, ui } = appState
     
     if (!validateConfig(llm, ['apiKey']) || !ui.text) {
       return
@@ -79,31 +78,19 @@ export class AppStore {
     // 保存用户消息
     const userMessage = ui.text.trim()
     
-    // 处理用户消息中的 markdown 图像（如果存在）
-    const userImages = extractMarkdownImages(userMessage)
-    let processedUserMessage = userMessage
-    if (userImages.length > 0) {
-      // 获取最后一个图像的地址作为背景
-      const lastImage = userImages[userImages.length - 1]
-      appState.ui.backgroundImage = lastImage.imageUrl
-      
-      // 从消息内容中移除所有图像标记
-      processedUserMessage = removeMarkdownImages(userMessage)
-    }
-    
-    // 保存用户消息到历史记录
+    // 保存用户消息到历史记录（原样保存，不做任何处理）
     const userChatMessage: ChatMessage = {
       role: 'user',
-      content: processedUserMessage,
+      content: userMessage,
       timestamp: Date.now()
     }
     appState.chatHistory.push(userChatMessage)
     
-    // 保存到数据库
+    // 保存到数据库（原样保存，不做处理）
     try {
       await saveChatMessage(
         'user',
-        processedUserMessage,
+        userMessage,
         llm.apiKey,
         llm.user || '',
         userChatMessage.timestamp
@@ -128,14 +115,14 @@ export class AppStore {
           content: msg.content
         }))
       
-      // 发送到LLM获取回复
+      // 发送到LLM获取回复（原样发送，不做处理）
       const stream = await llmService.sendMessageWithStream({
         provider: 'openai',
         model: llm.model,
         apiKey: llm.apiKey,
         baseURL: llm.baseURL,
         user: llm.user
-      }, processedUserMessage, recentHistory)
+      }, userMessage, recentHistory)
 
       if (!stream) return
 

@@ -103,6 +103,15 @@ export function extractMarkdownImages(text: string): Array<{fullMatch: string, a
     matches.push({ fullMatch, altText, imageUrl })
   }
 
+  // 重置正则表达式的 lastIndex，确保下次调用时从字符串开头开始匹配
+  markdownImageRegex.lastIndex = 0
+
+  // 显示匹配到的最后图片的信息
+  if (matches.length > 0) {
+    const lastImage = matches[matches.length - 1]
+    console.log('匹配到的最后图片信息:', lastImage)
+  }
+
   return matches
 }
 
