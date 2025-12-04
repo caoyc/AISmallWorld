@@ -4,3 +4,4 @@ data/
 *.db
 *.db-journal
 SillyTavern/
+uploads/

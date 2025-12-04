@@ -124,3 +124,47 @@ export function removeMarkdownImages(text: string): string {
   const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g
   return text.replace(markdownImageRegex, '').trim()
 }
+
+/**
+ * 递归分割字符串为不超过指定长度的部分
+ * @param input - 要分割的字符串
+ * @param length - 每个部分的最大长度
+ * @param delimiters - 用于分割的分隔符数组（按优先级排序）
+ * @returns {string[]} - 分割后的字符串数组
+ * @example
+ * splitRecursive('Hello, world!', 3); // ['Hel', 'lo,', 'wor', 'ld!']
+ */
+export function splitRecursive(input: string, length: number, delimiters: string[] = ['\n\n', '\n', ' ', '']): string[] {
+  // 无效长度
+  if (length <= 0) {
+    return [input]
+  }
+
+  const delim = delimiters[0] ?? ''
+  const parts = input.split(delim)
+
+  const flatParts = parts.flatMap(p => {
+    if (p.length < length) return p
+    return splitRecursive(p, length, delimiters.slice(1))
+  })
+
+  // 合并短块
+  const result: string[] = []
+  let currentChunk = ''
+  for (let i = 0; i < flatParts.length;) {
+    currentChunk = flatParts[i]
+    let j = i + 1
+    while (j < flatParts.length) {
+      const nextChunk = flatParts[j]
+      if (currentChunk.length + nextChunk.length + delim.length <= length) {
+        currentChunk += delim + nextChunk
+      } else {
+        break
+      }
+      j++
+    }
+    i = j
+    result.push(currentChunk)
+  }
+  return result
+}

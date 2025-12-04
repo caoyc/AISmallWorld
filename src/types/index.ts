@@ -135,7 +135,7 @@ export interface TtsConfig {
 
 // TTS服务接口
 export interface TtsService {
-  synthesize(text: string, config: TtsConfig): Promise<ArrayBuffer>
+  synthesize(text: string, config: TtsConfig): Promise<ArrayBuffer | ArrayBuffer[]>
 }
 
 // Store类型定义
