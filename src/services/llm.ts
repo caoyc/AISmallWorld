@@ -104,21 +104,54 @@ class LlmService {
     // 添加当前用户消息
     messages.push({ role: 'user', content: userMessage })
 
-    const stream = await this.openai.chat.completions.create({
-      messages,
-      model: config.model,
-      stream: true,
-      ...(config.user && { user: config.user })
-    })
+    try {
+      const stream = await this.openai.chat.completions.create({
+        messages,
+        model: config.model,
+        stream: true,
+        ...(config.user && { user: config.user })
+      })
 
-    return (async function* () {
-      for await (const part of stream) {
-        const content = part.choices[0]?.delta?.content
-        if (content) {
-          yield content
+      return (async function* () {
+        try {
+          for await (const part of stream) {
+            const content = part.choices[0]?.delta?.content
+            if (content) {
+              yield content
+            }
+          }
+        } catch (error) {
+          console.error('流式读取失败:', error)
+          throw error
         }
+      })()
+    } catch (error: any) {
+      console.error('LLM流式请求失败:', error)
+      // 提取详细错误信息
+      let errorMessage = 'LLM请求失败'
+      if (error?.message) {
+        errorMessage = error.message
+      } else if (error?.error?.message) {
+        errorMessage = error.error.message
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      } else if (error?.toString) {
+        errorMessage = error.toString()
       }
-    })()
+      
+      // 添加状态码和错误类型信息
+      if (error?.status) {
+        errorMessage += ` (状态码: ${error.status})`
+      }
+      if (error?.code) {
+        errorMessage += ` (错误代码: ${error.code})`
+      }
+      if (error?.type) {
+        errorMessage += ` (错误类型: ${error.type})`
+      }
+      
+      throw new Error(errorMessage)
+    }
   }
 }
 

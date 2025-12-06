@@ -2556,33 +2556,33 @@ async function previewPartnerVoice() {
     for (let i = 0; i < audioChunks.length; i++) {
       const chunk = audioChunks[i]
       const blob = new Blob([chunk], { type: 'audio/mpeg' })
-      const url = URL.createObjectURL(blob)
-      const audio = new Audio(url)
-      partnerPreviewAudio.value = audio
-      
-      // 设置播放完成和错误处理
+    const url = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    partnerPreviewAudio.value = audio
+    
+    // 设置播放完成和错误处理
       await new Promise<void>((resolve, reject) => {
-        audio.onended = () => {
-          URL.revokeObjectURL(url)
+    audio.onended = () => {
+      URL.revokeObjectURL(url)
           if (i === audioChunks.length - 1) {
-            partnerPreviewAudio.value = null
-            isPartnerPreviewPlaying.value = false
+      partnerPreviewAudio.value = null
+      isPartnerPreviewPlaying.value = false
           }
           resolve()
-        }
-        
-        audio.onerror = (error) => {
-          console.error('试听音频播放失败:', error)
-          URL.revokeObjectURL(url)
-          partnerPreviewAudio.value = null
-          isPartnerPreviewPlaying.value = false
+    }
+    
+    audio.onerror = (error) => {
+      console.error('试听音频播放失败:', error)
+      URL.revokeObjectURL(url)
+      partnerPreviewAudio.value = null
+      isPartnerPreviewPlaying.value = false
           reject(new Error('音频播放失败'))
-        }
-        
+    }
+    
         audio.play()
           .then(() => {
             if (i === 0) {
-              isPartnerPreviewPlaying.value = true
+      isPartnerPreviewPlaying.value = true
             }
           })
           .catch(reject)
@@ -2639,33 +2639,33 @@ async function previewUserVoice() {
     for (let i = 0; i < audioChunks.length; i++) {
       const chunk = audioChunks[i]
       const blob = new Blob([chunk], { type: 'audio/mpeg' })
-      const url = URL.createObjectURL(blob)
-      const audio = new Audio(url)
-      userPreviewAudio.value = audio
-      
-      // 设置播放完成和错误处理
+    const url = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    userPreviewAudio.value = audio
+    
+    // 设置播放完成和错误处理
       await new Promise<void>((resolve, reject) => {
-        audio.onended = () => {
-          URL.revokeObjectURL(url)
+    audio.onended = () => {
+      URL.revokeObjectURL(url)
           if (i === audioChunks.length - 1) {
-            userPreviewAudio.value = null
-            isUserPreviewPlaying.value = false
+      userPreviewAudio.value = null
+      isUserPreviewPlaying.value = false
           }
           resolve()
-        }
-        
-        audio.onerror = (error) => {
-          console.error('试听音频播放失败:', error)
-          URL.revokeObjectURL(url)
-          userPreviewAudio.value = null
-          isUserPreviewPlaying.value = false
+    }
+    
+    audio.onerror = (error) => {
+      console.error('试听音频播放失败:', error)
+      URL.revokeObjectURL(url)
+      userPreviewAudio.value = null
+      isUserPreviewPlaying.value = false
           reject(new Error('音频播放失败'))
-        }
-        
+    }
+    
         audio.play()
           .then(() => {
             if (i === 0) {
-              isUserPreviewPlaying.value = true
+      isUserPreviewPlaying.value = true
             }
           })
           .catch(reject)
@@ -3713,7 +3713,20 @@ async function handleSendMessage() {
     await appStore.sendMessage()
   } catch (error) {
     console.error('发送消息失败:', error)
-    showToastMessage('发送消息失败', 'error')
+    
+    // 提取详细错误信息
+    let errorMessage = '发送消息失败'
+    if (error instanceof Error) {
+      errorMessage = error.message
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = String(error.message)
+    } else if (typeof error === 'string') {
+      errorMessage = error
+    } else {
+      errorMessage = '发送消息失败: ' + String(error)
+    }
+    
+    showToastMessage(errorMessage, 'error')
   } finally {
     isSending.value = false
   }
@@ -5138,36 +5151,36 @@ async function previewTtsVoice() {
     for (let i = 0; i < audioChunks.length; i++) {
       const chunk = audioChunks[i]
       const blob = new Blob([chunk], { type: 'audio/mpeg' })
-      const url = URL.createObjectURL(blob)
-      const audio = new Audio(url)
-      ttsPreviewAudio.value = audio
-      
-      // 设置播放完成和错误处理
+    const url = URL.createObjectURL(blob)
+    const audio = new Audio(url)
+    ttsPreviewAudio.value = audio
+    
+    // 设置播放完成和错误处理
       await new Promise<void>((resolve, reject) => {
-        audio.onended = () => {
+    audio.onended = () => {
           console.log('试听播放完成，片段', i + 1, '/', audioChunks.length)
-          URL.revokeObjectURL(url)
+      URL.revokeObjectURL(url)
           if (i === audioChunks.length - 1) {
-            ttsPreviewAudio.value = null
-            isTtsPreviewPlaying.value = false
+      ttsPreviewAudio.value = null
+      isTtsPreviewPlaying.value = false
           }
           resolve()
-        }
-        
-        audio.onerror = (error) => {
-          console.error('试听音频播放失败:', error)
-          URL.revokeObjectURL(url)
-          ttsPreviewAudio.value = null
-          isTtsPreviewPlaying.value = false
+    }
+    
+    audio.onerror = (error) => {
+      console.error('试听音频播放失败:', error)
+      URL.revokeObjectURL(url)
+      ttsPreviewAudio.value = null
+      isTtsPreviewPlaying.value = false
           reject(new Error('音频播放失败'))
-        }
-        
+    }
+    
         audio.play()
           .then(() => {
             if (i === 0) {
-              console.log('开始播放音频...')
-              isTtsPreviewPlaying.value = true
-              console.log('音频播放成功')
+      console.log('开始播放音频...')
+      isTtsPreviewPlaying.value = true
+      console.log('音频播放成功')
             }
           })
           .catch(reject)

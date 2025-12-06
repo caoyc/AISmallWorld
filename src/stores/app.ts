@@ -181,7 +181,15 @@ export class AppStore {
       return finalContent
     } catch (error) {
       console.error('发送消息失败:', error)
-      throw error
+      
+      // 提取详细错误信息并重新抛出，确保错误信息完整传递
+      if (error instanceof Error) {
+        throw error
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        throw new Error(String(error.message))
+      } else {
+        throw new Error('发送消息失败: ' + String(error))
+      }
     }
   }
 

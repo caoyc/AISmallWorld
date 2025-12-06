@@ -56,36 +56,36 @@ export class DoubaoTtsService implements TtsService {
     const audioChunks: ArrayBuffer[] = []
     
     for (const chunk of chunks) {
-      console.debug('Doubao TTS request', {
-        voice: voiceType,
+    console.debug('Doubao TTS request', {
+      voice: voiceType,
         text: chunk.substring(0, 50) + '...',
-        speed: config.speed,
-        volume: config.volume
-      })
-      
-      // 通过后端代理API调用（避免CORS问题）
-      const response = await fetch('http://localhost:3001/api/doubao/generate-voice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          apiKey: config.apiKey,
+      speed: config.speed,
+      volume: config.volume
+    })
+    
+    // 通过后端代理API调用（避免CORS问题）
+    const response = await fetch('http://localhost:3001/api/doubao/generate-voice', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        apiKey: config.apiKey,
           text: chunk,
-          voice: voiceType,
-          speed: config.speed ?? 1.0,
-          volume: config.volume ?? 1.0,
-        })
+        voice: voiceType,
+        speed: config.speed ?? 1.0,
+        volume: config.volume ?? 1.0,
       })
-      
-      if (!response.ok) {
-        const errorText = await response.text()
+    })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
         console.error('Doubao TTS chunk failed:', errorText)
-        throw new Error(`TTS API请求失败: ${response.status} ${response.statusText} - ${errorText}`)
-      }
-      
-      // 后端返回的是音频数据的ArrayBuffer（已经是解码后的二进制数据）
-      const audioArrayBuffer = await response.arrayBuffer()
+      throw new Error(`TTS API请求失败: ${response.status} ${response.statusText} - ${errorText}`)
+    }
+    
+    // 后端返回的是音频数据的ArrayBuffer（已经是解码后的二进制数据）
+    const audioArrayBuffer = await response.arrayBuffer()
       audioChunks.push(audioArrayBuffer)
     }
     
