@@ -44,7 +44,7 @@ def _format_group(items, caller):
             seen_names[name] = []
         seen_names[name].append(obj)
 
-    from survival.v2.rooms import SurvivalRoomV2
+    from survival.rooms import SurvivalRoomV2
     lines = []
     for name, objs in seen_names.items():
         count = len(objs)

@@ -22,7 +22,7 @@ def _format_group(items, caller):
     Returns:
         list: 格式化后的文本行。
     """
-    from survival.v2.rooms import SurvivalRoomV2
+    from survival.rooms import SurvivalRoomV2
     lines = []
     for obj in items:
         desc = obj.get_display_desc(caller)

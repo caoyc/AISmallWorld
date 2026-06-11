@@ -8,7 +8,7 @@ import uuid
 from evennia.prototypes.spawner import spawn
 from evennia.utils import delay
 from .drying_timer import attach_drying_timer
-from survival.v2.prototypes import WEAR_MAP
+from survival.prototypes import WEAR_MAP
 
 # ── 常量 ──────────────────────────────────────────
 AUTO_ACTION_INTERVAL = 3  # 每轮间隔（秒）

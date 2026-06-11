@@ -49,16 +49,16 @@ if _sys_path not in sys.path:
 # 默认 Typeclass 配置
 ######################################################################
 
-BASE_CHARACTER_TYPECLASS = "survival.v2.characters.SurvivalCharacterV2"
-BASE_ROOM_TYPECLASS = "survival.v2.rooms.SurvivalRoomV2"
+BASE_CHARACTER_TYPECLASS = "survival.characters.SurvivalCharacterV2"
+BASE_ROOM_TYPECLASS = "survival.rooms.SurvivalRoomV2"
 
-# v2 prototype 注册
-PROTOTYPE_MODULES = ["survival.v2.prototypes"]
+# prototype 注册
+PROTOTYPE_MODULES = ["survival.prototypes"]
 
 # 自定义锁函数
 LOCK_FUNC_MODULES = (
     "evennia.locks.lockfuncs",
-    "survival.v2.utils.lockfuncs",
+    "survival.utils.lockfuncs",
 )
 
 # 出生点（build 前注释，build 后恢复）

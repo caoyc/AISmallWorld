@@ -11,12 +11,12 @@ PROTOTYPE_LIST = [
     # ── 顶层基类 ──
     {
         "prototype_key": "non_living",
-        "typeclass": "survival.v2.objects.NonLiving",
+        "typeclass": "survival.objects.NonLiving",
         "key": "非生物",
     },
     {
         "prototype_key": "organism",
-        "typeclass": "survival.v2.objects.Organism",
+        "typeclass": "survival.objects.Organism",
         "key": "生物",
     },
 
@@ -245,7 +245,7 @@ PROTOTYPE_LIST = [
     {
         "prototype_key": "coconut_tree",
         "prototype_parent": "plantae_arecaceae_cocos_nucifera",
-        "typeclass": "survival.v2.objects.CoconutTree",
+        "typeclass": "survival.objects.CoconutTree",
         "key": "椰子树",
         "locks": "get:false()",
         "attrs": [
@@ -1103,7 +1103,7 @@ PROTOTYPE_LIST = [
     {
         "prototype_key": "weed",
         "prototype_parent": "plantae",
-        "typeclass": "survival.v2.objects.Organism",
+        "typeclass": "survival.objects.Organism",
         "key": "杂草丛",
         "aliases": [],
         "locks": "get:false()",
@@ -1127,7 +1127,7 @@ PROTOTYPE_LIST = [
     {
         "prototype_key": "moss_plant",
         "prototype_parent": "plantae_sphagnaceae_sphagnum",
-        "typeclass": "survival.v2.objects.Organism",
+        "typeclass": "survival.objects.Organism",
         "key": "苔藓丛",
         "aliases": [],
         "locks": "get:false()",
@@ -1645,7 +1645,7 @@ PROTOTYPE_LIST = [
         "prototype_key": "fish_trap",
         "prototype_parent": "non_living",
         "key": "捕鱼笼",
-        "typeclass": "survival.v2.objects.FishTrap",
+        "typeclass": "survival.objects.FishTrap",
         "attrs": [
             ("tool_type", "fishing"),
             ("trap_state", "empty"),
@@ -1888,7 +1888,7 @@ PROTOTYPE_LIST = [
     {
         "prototype_key": "small_fire",
         "prototype_parent": "non_living",
-        "typeclass": "survival.v2.objects.Campfire",
+        "typeclass": "survival.objects.Campfire",
         "key": "小型篝火",
         "locks": "get:false()",
         "attrs": [
@@ -1920,7 +1920,7 @@ PROTOTYPE_LIST = [
     {
         "prototype_key": "campfire",
         "prototype_parent": "non_living",
-        "typeclass": "survival.v2.objects.Campfire",
+        "typeclass": "survival.objects.Campfire",
         "key": "营火",
         "locks": "get:false()",
         "attrs": [
@@ -1941,7 +1941,7 @@ PROTOTYPE_LIST = [
     {
         "prototype_key": "tent",
         "prototype_parent": "non_living",
-        "typeclass": "survival.v2.objects.Tent",
+        "typeclass": "survival.objects.Tent",
         "key": "帐篷",
         "locks": "get:false()",
         "attrs": [

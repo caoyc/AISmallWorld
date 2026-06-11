@@ -1,17 +1,136 @@
 """
-v2 角色 Typeclass — SurvivalCharacterV2
+角色 Typeclass — SurvivalCharacterV2
 
-继承 v1 SurvivalCharacter（饥渴 ticker 机制不变），新增耐力系统。
+带饥渴系统 + 耐力系统的角色，继承 DefaultCharacter。
 
 详见：docs/设计文档/解决饥渴_v2/详细设计/角色与耐力.md
 """
 
-from survival.v1.characters import SurvivalCharacter
-from survival.v2.commands.cmdset import SurvivalV2CmdSet
+import time
+
+from evennia.objects.objects import DefaultCharacter
+from evennia.scripts.tickerhandler import TICKER_HANDLER
+
+from survival.commands.cmdset import SurvivalV2CmdSet
+
+
+class SurvivalCharacter(DefaultCharacter):
+    """带饥渴系统的角色基类。
+
+    每隔 TICK_INTERVAL 秒自动递减 hunger 和 thirst 属性，
+    根据状态分段向玩家发送提示消息。
+    """
+
+    TICK_INTERVAL = 30
+    HUNGER_DECAY = 1
+    THIRST_DECAY = 2
+
+    STATUS_THRESHOLDS = [
+        {
+            "min": 80,
+            "max": 100,
+            "label": "正常",
+            "hunger_msg": None,
+            "thirst_msg": None,
+            "interval": 0,
+        },
+        {
+            "min": 50,
+            "max": 79,
+            "label": "轻度",
+            "hunger_msg": "你感到有些饥饿。",
+            "thirst_msg": "你感到有些口渴。",
+            "interval": 300,
+        },
+        {
+            "min": 20,
+            "max": 49,
+            "label": "中度",
+            "hunger_msg": "你很饿了，肚子咕咕直叫。",
+            "thirst_msg": "你很渴，嘴唇干裂，喉咙像火烧。",
+            "interval": 120,
+        },
+        {
+            "min": 0,
+            "max": 19,
+            "label": "严重",
+            "hunger_msg": "你饿得头晕眼花，四肢无力。",
+            "thirst_msg": "你渴得快要昏过去了，视线开始模糊。",
+            "interval": 60,
+        },
+    ]
+
+    def at_object_creation(self):
+        super().at_object_creation()
+        self.db.hunger = 100
+        self.db.thirst = 100
+        self.db.hunger_last_warn = 0.0
+        self.db.thirst_last_warn = 0.0
+
+    def at_post_puppet(self, **kwargs):
+        super().at_post_puppet(**kwargs)
+        TICKER_HANDLER.add(
+            self.TICK_INTERVAL,
+            self.tick_hunger_thirst,
+            idstring=str(self.dbref),
+        )
+
+    def at_post_unpuppet(self, account=None, session=None, **kwargs):
+        TICKER_HANDLER.remove(
+            self.TICK_INTERVAL,
+            self.tick_hunger_thirst,
+            idstring=str(self.dbref),
+        )
+        super().at_post_unpuppet(account=account, session=session, **kwargs)
+
+    def tick_hunger_thirst(self, **kwargs):
+        self.db.hunger = max(0, self.db.hunger - self.HUNGER_DECAY)
+        self.db.thirst = max(0, self.db.thirst - self.THIRST_DECAY)
+        now = time.time()
+        for threshold in self.STATUS_THRESHOLDS:
+            if threshold["min"] <= self.db.hunger <= threshold["max"]:
+                if threshold["hunger_msg"] and threshold["interval"] > 0:
+                    elapsed = now - self.db.hunger_last_warn
+                    if elapsed >= threshold["interval"]:
+                        self.msg(threshold["hunger_msg"])
+                        self.db.hunger_last_warn = now
+                break
+        for threshold in self.STATUS_THRESHOLDS:
+            if threshold["min"] <= self.db.thirst <= threshold["max"]:
+                if threshold["thirst_msg"] and threshold["interval"] > 0:
+                    elapsed = now - self.db.thirst_last_warn
+                    if elapsed >= threshold["interval"]:
+                        self.msg(threshold["thirst_msg"])
+                        self.db.thirst_last_warn = now
+                break
+
+    def get_status_label(self, value):
+        for threshold in self.STATUS_THRESHOLDS:
+            if threshold["min"] <= value <= threshold["max"]:
+                return threshold["label"]
+        return "未知"
+
+    def get_status_display(self):
+        hunger_label = self.get_status_label(self.db.hunger)
+        thirst_label = self.get_status_label(self.db.thirst)
+        return (
+            f"--- 状态 ---\n"
+            f"饥饿: {self.db.hunger} [{hunger_label}]\n"
+            f"口渴: {self.db.thirst} [{thirst_label}]"
+        )
+
+    def restore_hunger(self, amount):
+        self.db.hunger = min(100, self.db.hunger + amount)
+
+    def restore_thirst(self, amount):
+        self.db.thirst = min(100, self.db.thirst + amount)
+
+    def increase_thirst(self, amount):
+        self.db.thirst = max(0, self.db.thirst - amount)
 
 
 class SurvivalCharacterV2(SurvivalCharacter):
-    """v2 生存角色，继承 v1 饥渴机制，新增耐力系统。
+    """v2 生存角色，饥渴 + 耐力系统。
 
     Attributes:
         db.stamina (int): 当前耐力值（0~100），默认 100。
@@ -43,7 +162,7 @@ class SurvivalCharacterV2(SurvivalCharacter):
         if self.location and self.location.access(self, "view"):
             look_result = self.at_look(self.location)
             # 追加地图
-            from survival.v2.commands.map import _render_map
+            from survival.commands.map import _render_map
             exits_info = [
                 (ex.key, ex.destination.key)
                 for ex in self.location.exits

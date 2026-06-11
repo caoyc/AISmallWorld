@@ -1,16 +1,36 @@
 """
-v2 房间 Typeclass — SurvivalRoomV2
+房间类型类 — SurvivalRoomV2
 
-继承 v1 SurvivalRoom，保持五感描述支持。
-覆写 return_appearance 实现自定义房间 look 显示格式。
+支持五感描述 + 房间级资源的房间类型。
 
-详见：docs/设计文档/解决饥渴_v2/详细设计/详细设计.md
-详见：docs/设计文档/石刃业务闭环/详细设计/房间look显示.md
+详见：docs/设计文档/解决饥渴_v2/详细设计/
 """
 
 from collections import defaultdict
 
-from survival.v1.rooms import SurvivalRoom
+from evennia.objects.objects import DefaultRoom
+
+
+class SurvivalRoom(DefaultRoom):
+    """支持五感描述的房间基类。"""
+
+    DEFAULT_SENSE_MESSAGES = {
+        "listen": "这里安安静静的，没有什么特别的声音。",
+        "smell": "这里的空气没有什么特别的气味。",
+        "touch": "你感受了一下周围，没有什么特别的触感。",
+        "taste": "空气中没有什么可以品尝的味道。",
+    }
+
+    def get_display_desc(self, looker, **kwargs):
+        return self.db.desc_look or self.db.desc or self.default_description
+
+    def get_sense_description(self, sense):
+        desc = self.attributes.get(f"desc_{sense}")
+        if desc:
+            return desc
+        if sense == "look":
+            return self.db.desc or self.default_description
+        return self.DEFAULT_SENSE_MESSAGES.get(sense, "你什么也没有感受到。")
 
 
 class SurvivalRoomV2(SurvivalRoom):

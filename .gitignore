@@ -11,3 +11,4 @@ logs/
 *.sqlite3
 .env
 dh_config.json
+.static/

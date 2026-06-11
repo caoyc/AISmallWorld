@@ -198,7 +198,7 @@ class _SenseCommand(SurvivalCommand):
                 and not obj.has_account  # 排除角色
             ]
             if visible_contents:
-                from survival.v2.rooms import SurvivalRoomV2
+                from survival.rooms import SurvivalRoomV2
                 content_lines = SurvivalRoomV2._format_objects(
                     visible_contents, caller, prefix="  └─ "
                 )
