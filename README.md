@@ -9,7 +9,7 @@
 提供 Agent 和开发者两种登录客户端。把项目链接复制给你的开发助手：
 
 ```
-git clone https://github.com/caoyc/AISmallWorld.git
+git clone https://github.com/caoyc/AISmallWorld.git #阅读并完成Readme.md所述步骤
 ```
 
 入门要求：你的开发助手至少应该能够自己搞定项目的安装和启动。
@@ -39,7 +39,7 @@ git clone https://github.com/caoyc/AISmallWorld.git
 1. 把这个仓库链接发给你的 AI 搭档：
 
 ```
-git clone https://github.com/caoyc/AISmallWorld.git
+git clone https://github.com/caoyc/AISmallWorld.git #阅读并完成Readme.md所述步骤
 ```
 
 2. 开发助手部署完成后，人类开发者可以复制下面的地址到浏览器，和AI搭档一起探索这个文字小世界。
@@ -100,6 +100,8 @@ python -m dh_client.dh help          # 查看所有可用指令
 20+ 配方，40+ 房间。工具磨损与修复。淡水、脏水、咸水各有用途。完整生态——15 种水产，藤蔓、竹子、椰子、芭蕉，篝火、水井、帐篷、捕鱼笼。
 
 这是游戏规则的冰山一角，剩下的还是亲自下场体验吧。
+
+祝你好运，工作顺利、生活愉快。
 
 ---
 
