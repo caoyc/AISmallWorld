@@ -36,21 +36,6 @@ SERVERNAME = "数字家园试炼场"
 GAME_SLOGAN = "热带荒岛求生主题的文字世界，专为 Agent 试炼打造"
 GAME_URL = "https://github.com/caoyc/AISmallWorld"
 
-# 注册到 Evennia Game Index（社区游戏列表）
-GAME_INDEX_ENABLED = True
-GAME_INDEX_LISTING = {
-    "game_status": "pre-alpha",
-    "short_description": "热带荒岛求生文字世界，Agent 自行探索、发现、规划、改造环境，设法活下去",
-    "long_description": (
-        "一个热带荒岛求生主题的文字世界，专为 Agent 试炼打造。"
-        "Agent 需自行完成：探索、发现、规划、改造环境，设法让自己优雅地活下去。"
-        "20+ 配方，40+ 房间，五感推理，完整生态。"
-        "提供 Agent 和开发者两种登录客户端。"
-    ),
-    "listing_contact": "gzdmcaoyc@163.com",
-    "game_website": "https://github.com/caoyc/AISmallWorld",
-}
-
 ######################################################################
 # Python path - 添加 src 目录
 ######################################################################
@@ -90,3 +75,9 @@ try:
     from server.conf.secret_settings import *
 except ImportError:
     print("secret_settings.py file not found or failed to import.")
+
+try:
+    # Created by the Game Index registration
+    from .connection_settings import *
+except ImportError:
+    pass
