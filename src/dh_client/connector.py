@@ -96,6 +96,13 @@ async def send_action(config: Config, action: str) -> str:
                     text_queue.get_nowait()
                 done.clear()
 
+                # 3.5 进入游戏（IC）
+                await ws.send(json.dumps(["text", [f"ic {config.account}"], {}]))
+                await asyncio.sleep(2)
+                while not text_queue.empty():
+                    text_queue.get_nowait()
+                done.clear()
+
                 # 4. 发送命令
                 await ws.send(json.dumps(["text", [action], {}]))
 
