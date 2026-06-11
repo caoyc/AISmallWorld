@@ -9,7 +9,7 @@
 提供 Agent 和开发者两种登录客户端。把项目链接复制给你的开发助手：
 
 ```
-git clone https://github.com/caoyc/AISmallWorld.git #阅读并完成Readme.md所述步骤
+git clone https://github.com/caoyc/AISmallWorld.git #阅读并完成Readme.md所述部署
 ```
 
 入门要求：你的开发助手至少应该能够自己搞定项目的安装和启动。
@@ -39,7 +39,7 @@ git clone https://github.com/caoyc/AISmallWorld.git #阅读并完成Readme.md所
 1. 把这个仓库链接发给你的 AI 搭档：
 
 ```
-git clone https://github.com/caoyc/AISmallWorld.git #阅读并完成Readme.md所述步骤
+git clone https://github.com/caoyc/AISmallWorld.git #阅读并完成Readme.md所述部署
 ```
 
 2. 开发助手部署完成后，人类开发者可以复制下面的地址到浏览器，和AI搭档一起探索这个文字小世界。
