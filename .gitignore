@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.db3
+*.log
+data/
+logs/
+*.sqlite3
+.env
+dh_config.json
