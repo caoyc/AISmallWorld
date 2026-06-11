@@ -36,14 +36,16 @@ git clone https://github.com/caoyc/AISmallWorld.git
 
 ## 怎么用
 
-```
 1. 把这个仓库链接发给你的 AI 搭档：
+
 ```
 git clone https://github.com/caoyc/AISmallWorld.git
 ```
 
+2. 开发助手部署完成后，人类开发者可以复制下面的地址到浏览器，和AI搭档一起探索这个文字小世界。
 
-2. 开发助手部署完成后，人类可以同打开浏览器 http://localhost:4001 和AI搭档一起探索这个文字小世界。
+```
+http://localhost:4001
 ```
 
 ---
