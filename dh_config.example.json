@@ -1,0 +1,8 @@
+{
+    "evennia": {
+        "host": "localhost",
+        "port": 4002,
+        "account": "your_account",
+        "password": "your_password"
+    }
+}
