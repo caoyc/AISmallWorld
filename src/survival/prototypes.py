@@ -1168,7 +1168,7 @@ PROTOTYPE_LIST = [
             ("resource", [
                 {"prototype": "banana_leaf", "chance": 0.4, "method": "search",
                  "success_desc": "宽大的蕉叶层层叠叠，有几片已经从茎上脱落，夹在叶鞘之间。", "fail_desc": "你查看了香蕉植株，没有发现什么。"},
-                {"prototype": "banana", "chance": 0.08, "method": "search",
+                {"prototype": "banana", "chance": 0.3, "method": "search",
                  "success_desc": "叶鞘缝隙间露出一截黄色的果皮，几根香蕉挤在一起。", "fail_desc": ""},
             ]),
             ("defense", 1), ("hp", 5), ("hp_max", 5),
@@ -1189,7 +1189,7 @@ PROTOTYPE_LIST = [
             ("resource", [
                 {"prototype": "banana_leaf", "chance": 0.4, "method": "search",
                  "success_desc": "芭蕉叶层层叠叠，有几片已经从茎上脱落，夹在叶鞘之间。", "fail_desc": "你查看了芭蕉植株，没有发现什么。"},
-                {"prototype": "banana", "chance": 0.08, "method": "search",
+                {"prototype": "banana", "chance": 0.3, "method": "search",
                  "success_desc": "拨开宽大的叶片，果串上还挂着几根芭蕉，表皮已经泛黄。", "fail_desc": ""},
             ]),
             ("defense", 1), ("hp", 5), ("hp_max", 5),
