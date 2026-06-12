@@ -61,9 +61,45 @@ class DaemonState:
     # 未读消息：两次命令之间到达的消息（椰子掉落、被攻击、别人说话……）
     _unread: list = field(default_factory=list)
 
+    # 持久化日志路径
+    _log_path: str = ""
+
 
 def _now_ts() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _get_log_path() -> str:
+    """日志文件路径：项目根目录/logs/observer.jsonl"""
+    root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    log_dir = os.path.join(root, "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    return os.path.join(log_dir, "observer.jsonl")
+
+
+def _persist_entry(log_path: str, entry: dict):
+    """追加一条日志到 JSONL 文件。"""
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass
+
+
+def _load_history(log_path: str) -> list:
+    """从 JSONL 文件加载全部历史记录。"""
+    if not os.path.exists(log_path):
+        return []
+    entries = []
+    try:
+        with open(log_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    entries.append(json.loads(line))
+    except (OSError, json.JSONDecodeError):
+        pass
+    return entries
 
 
 # ---- Evennia 消息回调 ----
@@ -82,9 +118,11 @@ async def _on_evennia_text(state: DaemonState, text: str):
         await obs.send_event("resp", {"ts": ts, "text": text})
 
     # 2. 记录日志
-    state.action_log.append({"ts": ts, "text": text})
-    if len(state.action_log) > 200:
-        state.action_log = state.action_log[-100:]
+    entry = {"ts": ts, "text": text}
+    state.action_log.append(entry)
+    if len(state.action_log) > 1000:
+        state.action_log = state.action_log[-500:]
+    _persist_entry(state._log_path, entry)
 
     # 3. 如果有 HTTP 请求在等响应，收集文本；否则进未读缓冲
     if state._response_future and not state._response_future.done():
@@ -162,7 +200,11 @@ async def _handle_action(request: web.Request) -> web.Response:
         state._response_timer_task = None
 
     # 记录
-    state.action_log.append({"ts": ts, "action": action, "response": response})
+    entry = {"ts": ts, "action": action, "response": response}
+    state.action_log.append(entry)
+    if len(state.action_log) > 1000:
+        state.action_log = state.action_log[-500:]
+    _persist_entry(state._log_path, entry)
 
     result = {
         "ok": True,
@@ -181,6 +223,20 @@ async def _handle_status(request: web.Request) -> web.Response:
 
 
 # ---- SSE 旁观端点 (端口 8080) ----
+
+
+async def _handle_history(request: web.Request) -> web.Response:
+    """GET /history — 返回全量历史记录。支持 ?limit=N 只返回最近 N 条。"""
+    state: DaemonState = request.app["state"]
+    limit = request.query.get("limit")
+    entries = _load_history(state._log_path)
+    if limit:
+        try:
+            n = int(limit)
+            entries = entries[-n:]
+        except ValueError:
+            pass
+    return web.json_response(entries)
 
 
 async def _observer_page(request: web.Request) -> web.Response:
@@ -275,6 +331,7 @@ async def _serve_observer(state: DaemonState):
     app["state"] = state
     app.router.add_get("/", _observer_page)
     app.router.add_get("/events", _observer_events)
+    app.router.add_get("/history", _handle_history)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8080)
@@ -296,6 +353,12 @@ async def _sse_heartbeat(state: DaemonState):
 
 
 async def _run(state: DaemonState):
+    # 加载历史记录
+    state._log_path = _get_log_path()
+    history = _load_history(state._log_path)
+    state.action_log = history
+    print(f"[daemon] 已加载 {len(history)} 条历史记录")
+
     print("[daemon] 正在连接 Evennia...")
     state.conn = EvenniaConnection(state.config)
     state.conn.on_text(lambda text: _on_evennia_text(state, text))

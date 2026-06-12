@@ -113,6 +113,31 @@
             if (hint) hint.remove();
         }
 
+        function loadHistory() {
+            return fetch('/history')
+                .then(r => r.json())
+                .then(entries => {
+                    if (!entries.length) return;
+                    removeHint();
+                    for (const entry of entries) {
+                        if (entry.action) {
+                            const key = 'cmd:' + entry.ts + ':' + entry.action;
+                            if (seenKeys.has(key)) continue;
+                            seenKeys.add(key);
+                            append('cmd', entry.ts, '> ' + entry.action);
+                        }
+                        const text = entry.response || entry.text;
+                        if (text) {
+                            const key = 'resp:' + entry.ts;
+                            if (seenKeys.has(key)) continue;
+                            seenKeys.add(key);
+                            append('resp', entry.ts, text);
+                        }
+                    }
+                })
+                .catch(() => {});  // 首次启动可能还没有历史文件
+        }
+
         function connect() {
             const es = new EventSource('/events');
 
@@ -179,7 +204,7 @@
             return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         }
 
-        connect();
+        loadHistory().then(() => connect());
     </script>
 </body>
 </html>
