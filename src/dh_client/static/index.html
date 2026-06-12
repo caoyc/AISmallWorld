@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字家园 — 旁观模式</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #1a1a2e;
+            color: #e0e0e0;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #16213e;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #0f3460;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            color: #64ffda;
+            font-weight: normal;
+        }
+
+        .status-bar {
+            font-size: 13px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            background: #0f3460;
+        }
+
+        .status-bar.connected { color: #64ffda; }
+        .status-bar.disconnected { color: #ff6b6b; }
+        .status-bar.connecting { color: #ffd93d; }
+
+        #log {
+            flex: 1;
+            padding: 16px 20px;
+            overflow-y: auto;
+        }
+
+        .entry {
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            border-left: 3px solid transparent;
+            border-radius: 2px;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .entry.cmd {
+            color: #64ffda;
+            border-left-color: #64ffda;
+            background: rgba(100, 255, 218, 0.05);
+        }
+
+        .entry.resp {
+            color: #e0e0e0;
+            border-left-color: #5c6bc0;
+            background: rgba(92, 107, 192, 0.08);
+        }
+
+        .entry.status {
+            color: #888;
+            border-left-color: #555;
+            font-style: italic;
+            font-size: 12px;
+        }
+
+        .timestamp {
+            color: #555;
+            font-size: 0.8em;
+            margin-right: 8px;
+        }
+
+        .empty-hint {
+            color: #555;
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>数字家园 — 旁观模式</h1>
+        <div class="status-bar connecting" id="status">正在连接...</div>
+    </div>
+    <div id="log">
+        <div class="empty-hint">等待 agent 开始活动...</div>
+    </div>
+
+    <script>
+        const log = document.getElementById('log');
+        const statusEl = document.getElementById('status');
+        // 用时间戳+内容去重，防止回放重复
+        const seenKeys = new Set();
+
+        function removeHint() {
+            const hint = log.querySelector('.empty-hint');
+            if (hint) hint.remove();
+        }
+
+        function connect() {
+            const es = new EventSource('/events');
+
+            es.addEventListener('cmd', (e) => {
+                const d = JSON.parse(e.data);
+                const key = 'cmd:' + d.ts + ':' + d.action;
+                if (seenKeys.has(key)) return;
+                seenKeys.add(key);
+                removeHint();
+                append('cmd', d.ts, '> ' + d.action);
+            });
+
+            es.addEventListener('resp', (e) => {
+                const d = JSON.parse(e.data);
+                const key = 'resp:' + d.ts;
+                if (seenKeys.has(key)) return;
+                seenKeys.add(key);
+                removeHint();
+                append('resp', d.ts, d.text);
+            });
+
+            es.addEventListener('status', (e) => {
+                const d = JSON.parse(e.data);
+                if (d.connected) {
+                    statusEl.textContent = '🟢 已连接';
+                    statusEl.className = 'status-bar connected';
+                } else {
+                    statusEl.textContent = '🔴 连接中断';
+                    statusEl.className = 'status-bar disconnected';
+                    append('status', nowTs(), '连接中断，正在重连...');
+                }
+            });
+
+            es.onopen = () => {
+                statusEl.textContent = '🟢 已连接';
+                statusEl.className = 'status-bar connected';
+            };
+
+            es.onerror = () => {
+                statusEl.textContent = '🔴 连接中断';
+                statusEl.className = 'status-bar disconnected';
+            };
+        }
+
+        function append(type, ts, text) {
+            const div = document.createElement('div');
+            div.className = 'entry ' + type;
+            div.innerHTML = '<span class="timestamp">' + escapeHtml(ts) + '</span>' + escapeHtml(text);
+            log.appendChild(div);
+            window.scrollTo(0, document.body.scrollHeight);
+        }
+
+        function nowTs() {
+            const d = new Date();
+            return d.getFullYear() + '-' +
+                String(d.getMonth() + 1).padStart(2, '0') + '-' +
+                String(d.getDate()).padStart(2, '0') + ' ' +
+                String(d.getHours()).padStart(2, '0') + ':' +
+                String(d.getMinutes()).padStart(2, '0') + ':' +
+                String(d.getSeconds()).padStart(2, '0');
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        connect();
+    </script>
+</body>
+</html>
