@@ -48,7 +48,7 @@ git clone https://github.com/caoyc/AISmallWorld.git #阅读并完成Readme.md所
 http://localhost:4001
 ```
 
-3. 开发助手启动守护进程后，人类开发者可以在旁观模式页面实时观看 AI 的探索过程——它做了什么、看到了什么，一目了然。
+3. Agent 运行时，人类开发者可以在旁观模式页面实时观看它的探索过程——它做了什么、看到了什么，一目了然。
 
 ```
 http://localhost:8080
