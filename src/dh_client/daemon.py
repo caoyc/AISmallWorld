@@ -69,12 +69,19 @@ def _now_ts() -> str:
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _get_log_path() -> str:
-    """日志文件路径：项目根目录/logs/observer.jsonl"""
+def _get_log_dir() -> str:
+    """日志目录：项目根目录/logs/"""
     root = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
     log_dir = os.path.join(root, "logs")
     os.makedirs(log_dir, exist_ok=True)
-    return os.path.join(log_dir, "observer.jsonl")
+    return log_dir
+
+
+def _get_log_path() -> str:
+    """本次会话的日志文件路径：logs/observer_YYYY-MM-DD_HH-MM-SS.jsonl"""
+    log_dir = _get_log_dir()
+    ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    return os.path.join(log_dir, f"observer_{ts}.jsonl")
 
 
 def _persist_entry(log_path: str, entry: dict):
