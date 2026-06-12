@@ -117,14 +117,7 @@ async def _on_evennia_text(state: DaemonState, text: str):
     for obs in list(state.observers):
         await obs.send_event("resp", {"ts": ts, "text": text})
 
-    # 2. 记录日志
-    entry = {"ts": ts, "text": text}
-    state.action_log.append(entry)
-    if len(state.action_log) > 1000:
-        state.action_log = state.action_log[-500:]
-    _persist_entry(state._log_path, entry)
-
-    # 3. 如果有 HTTP 请求在等响应，收集文本；否则进未读缓冲
+    # 2. 如果有 HTTP 请求在等响应，收集文本；否则记录日志
     if state._response_future and not state._response_future.done():
         state._response_texts.append(text)
         # 重置计时器：收到新消息，重新等 0.5 秒
@@ -134,8 +127,13 @@ async def _on_evennia_text(state: DaemonState, text: str):
             _response_timeout(state, 0.5)
         )
     else:
-        # 没人在等 → 未读消息（椰子掉落、被攻击、社交……）
+        # 没人在等 → 未读消息（椰子掉落、被攻击、社交……），记录日志
         state._unread.append({"ts": ts, "text": text})
+        entry = {"ts": ts, "text": text}
+        state.action_log.append(entry)
+        if len(state.action_log) > 1000:
+            state.action_log = state.action_log[-500:]
+        _persist_entry(state._log_path, entry)
 
 
 async def _response_timeout(state: DaemonState, delay: float):
