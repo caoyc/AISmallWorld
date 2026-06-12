@@ -152,7 +152,8 @@
 
             es.addEventListener('resp', (e) => {
                 const d = JSON.parse(e.data);
-                const key = 'resp:' + d.ts;
+                // 用 ts+text 摘要去重：同一秒内多条碎片 text 不同，不会误去重
+                const key = 'resp:' + d.ts + ':' + d.text.substring(0, 80);
                 if (seenKeys.has(key)) return;
                 seenKeys.add(key);
                 removeHint();
