@@ -799,8 +799,6 @@ def spawn_objects(rooms):
     Args:
         rooms (dict): {房间名: room对象}
     """
-    from survival.scripts.coconut_drop import attach_coconut_drop_timer
-
     for entry in OBJECT_DATA:
         prototype_key = entry[0]
         key_override = entry[1]
@@ -821,6 +819,3 @@ def spawn_objects(rooms):
             room = rooms.get(room_name)
             if room:
                 obj.move_to(room, quiet=True)
-            # 椰子树：spawn 后手动挂载掉落计时器
-            if prototype_key == "coconut_tree":
-                attach_coconut_drop_timer(obj)

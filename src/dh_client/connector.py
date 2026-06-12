@@ -1,21 +1,14 @@
 """Evennia WebSocket 长连接管理器。
 
-提供持久化的 WebSocket 连接，支持：
-- 一次连接、登录、IC，后续命令复用连接
-- 断线检测 + 自动重连
-- 消息间隔检测机制判断响应结束
-- BeautifulSoup 文本清洗
+回调驱动：Evennia 每推一条消息，立即触发 on_text 回调。
+不再使用消息间隔检测队列模式，消除所有延迟。
 
-Evennia WebSocket 协议:
-    所有消息为 JSON 数组: ["cmdname", [args], {kwargs}]
-    - 发命令: ["text", ["look"], {}]
-    - 收文本: ["text", ["描述..."], {}]
-    - 登录确认: ["logged_in", [], {}]
-    - 客户端选项: ["client_options", [], {"nocolor": True, "screenreader": True}]
+同时保留 send() 方法供请求-响应式调用（CLI）。
 """
 
 import asyncio
 import json
+from typing import Awaitable, Callable, Optional
 
 import websockets
 from bs4 import BeautifulSoup
@@ -24,17 +17,10 @@ from .config import Config
 
 # 超时配置（秒）
 _LOGIN_TIMEOUT = 10
-_RESPONSE_TIMEOUT = 15
-_MESSAGE_GAP = 1  # 消息间隔超过此值视为响应结束
 
 
 def _clean_text(text: str) -> str:
-    """清洗 Evennia 输出为纯文本。
-
-    1. BeautifulSoup 去 HTML 标签
-    2. 去首尾空白
-    3. 压缩连续空行
-    """
+    """清洗 Evennia 输出为纯文本。"""
     soup = BeautifulSoup(text, "html.parser")
     clean = soup.get_text(separator="\n")
     lines = clean.split("\n")
@@ -50,29 +36,40 @@ def _clean_text(text: str) -> str:
 
 
 class EvenniaConnection:
-    """Evennia WebSocket 长连接管理器。"""
+    """Evennia WebSocket 长连接管理器（回调驱动）。"""
 
     def __init__(self, config: Config):
         self._config = config
-        self._ws = None  # WebSocket 连接
-        self._connected = False  # 是否已连接并登录
-        self._text_queue: asyncio.Queue[str] = asyncio.Queue()
-        self._logged_in = asyncio.Event()
-        self._recv_task = None  # 接收协程
-        self._current_done: asyncio.Event | None = None
+        self._ws = None
+        self._connected = False
+        self._logged_in = False
+        self._recv_task = None
+
+        # 回调：Evennia 每推一条文本消息，立即触发
+        self._on_text: Optional[Callable[[str], Awaitable[None]]] = None
+
+        # 登录等待
+        self._login_event = asyncio.Event()
+
+        # 账号密码（断线重连用）
+        self._account: Optional[str] = None
+        self._password: Optional[str] = None
 
     @property
     def is_connected(self) -> bool:
-        """连接是否活跃且已登录。"""
         return self._connected and self._ws is not None
+
+    def on_text(self, callback: Callable[[str], Awaitable[None]]) -> None:
+        """注册文本消息回调。每条 Evennia 文本到达时立即触发。"""
+        self._on_text = callback
 
     async def connect(self) -> None:
         """连接 Evennia，登录，进入 IC。"""
         url = f"ws://{self._config.evennia_host}:{self._config.evennia_port}"
 
         self._ws = await websockets.connect(url, close_timeout=5)
-        self._logged_in.clear()
-        self._text_queue = asyncio.Queue()
+        self._connected = True
+        self._login_event.clear()
         self._recv_task = asyncio.create_task(self._recv_loop())
 
         # 1. 客户端选项
@@ -81,81 +78,48 @@ class EvenniaConnection:
         ))
 
         # 2. 登录
+        self._account = self._config.account
+        self._password = self._config.password
         await self._ws.send(json.dumps(
-            ["text", [f"connect {self._config.account} {self._config.password}"], {}]
+            ["text", [f"connect {self._account} {self._password}"], {}]
         ))
 
         try:
-            await asyncio.wait_for(self._logged_in.wait(), timeout=_LOGIN_TIMEOUT)
+            await asyncio.wait_for(self._login_event.wait(), timeout=_LOGIN_TIMEOUT)
         except asyncio.TimeoutError:
             await self.close()
             raise ConnectionError("登录失败：连接超时")
 
-        # 3. 清空登录产生的消息
-        while not self._text_queue.empty():
-            self._text_queue.get_nowait()
-        if self._current_done:
-            self._current_done.clear()
-
-        # 4. IC
+        # 3. IC
         await self._ws.send(json.dumps(["text", [f"ic {self._config.account}"], {}]))
-        await asyncio.sleep(2)
-        while not self._text_queue.empty():
-            self._text_queue.get_nowait()
-        if self._current_done:
-            self._current_done.clear()
+        await asyncio.sleep(2)  # 等 IC 消息输出完毕
 
-        self._connected = True
+        self._logged_in = True
 
-    async def send(self, action: str) -> str:
-        """发送命令，等待完整响应，返回纯文本。
-
-        复用已建立的连接。如果连接断开，抛出 ConnectionError。
-        """
+    async def send_command(self, command: str) -> None:
+        """发送游戏命令（不等响应，响应通过 on_text 回调异步到达）。"""
         if not self.is_connected:
             raise ConnectionError("Evennia 连接已断开")
+        await self._ws.send(json.dumps(["text", [command], {}]))
 
-        done = asyncio.Event()
-        self._current_done = done
-
-        # 发送命令
-        await self._ws.send(json.dumps(["text", [action], {}]))
-
-        # 等待响应完成（消息间隔 >= 1 秒）
-        try:
-            await asyncio.wait_for(done.wait(), timeout=_RESPONSE_TIMEOUT)
-        except asyncio.TimeoutError:
-            pass
-
-        # 收集消息
-        texts = []
-        while not self._text_queue.empty():
-            texts.append(self._text_queue.get_nowait())
-
-        if not texts:
-            return "（无响应）"
-
-        raw = "\n".join(texts)
-        return _clean_text(raw)
+    async def close(self) -> None:
+        """关闭连接。"""
+        self._connected = False
+        self._logged_in = False
+        if self._recv_task:
+            self._recv_task.cancel()
+            try:
+                await self._recv_task
+            except asyncio.CancelledError:
+                pass
+        if self._ws:
+            try:
+                await self._ws.close()
+            except Exception:
+                pass
 
     async def _recv_loop(self) -> None:
-        """接收 Evennia 消息，检测连接断开。"""
-        last_text_time = None
-
-        async def _gap_watcher():
-            """消息间隔监视器。"""
-            nonlocal last_text_time
-            while True:
-                await asyncio.sleep(0.2)
-                if last_text_time is not None:
-                    gap = asyncio.get_event_loop().time() - last_text_time
-                    if gap >= _MESSAGE_GAP:
-                        if self._current_done is not None:
-                            self._current_done.set()
-                        return
-
-        watcher_task = asyncio.create_task(_gap_watcher())
-
+        """接收 Evennia 消息，立即触发回调。"""
         try:
             async for raw in self._ws:
                 try:
@@ -170,50 +134,42 @@ class EvenniaConnection:
                 args = msg[1] if len(msg) > 1 else []
 
                 if cmd == "logged_in":
-                    self._logged_in.set()
+                    self._logged_in = True
+                    self._login_event.set()
+
                 elif cmd == "text":
                     if args:
                         text = args[0] if isinstance(args[0], str) else str(args[0])
-                        if text.strip():
-                            await self._text_queue.put(text)
-                            last_text_time = asyncio.get_event_loop().time()
-                            # 收到新消息，重置 done
-                            if self._current_done is not None:
-                                self._current_done.clear()
+                        cleaned = _clean_text(text)
+                        if cleaned.strip() and self._on_text:
+                            await self._on_text(cleaned)
+
         except websockets.ConnectionClosed:
-            pass  # 连接断开，设置 is_connected = False
+            pass
         finally:
             self._connected = False
-            watcher_task.cancel()
-
-    async def close(self) -> None:
-        """关闭连接。"""
-        self._connected = False
-        if self._recv_task:
-            self._recv_task.cancel()
-            try:
-                await self._recv_task
-            except asyncio.CancelledError:
-                pass
-        if self._ws:
-            try:
-                await self._ws.close()
-            except Exception:
-                pass
+            self._logged_in = False
 
 
 # ---- 向后兼容：保留旧的无状态接口 ----
 
 async def send_action(config: Config, action: str) -> str:
-    """连接 Evennia，发送一条命令，返回纯文本响应。
+    """向后兼容：连接 → 登录 → 发命令 → 收响应 → 断开。"""
+    texts = []
+    event = asyncio.Event()
 
-    向后兼容的快捷方式：连接 → 登录 → 发命令 → 收响应 → 断开。
-    推荐使用 EvenniaConnection 类代替。
-    """
+    async def _collect(text: str):
+        texts.append(text)
+        event.set()
+
     conn = EvenniaConnection(config)
+    conn.on_text(_collect)
     try:
         await conn.connect()
-        return await conn.send(action)
+        await conn.send_command(action)
+        # 等第一条响应
+        await asyncio.wait_for(event.wait(), timeout=15)
+        return "\n".join(texts)
     except ConnectionError as e:
         return str(e)
     except ConnectionRefusedError:

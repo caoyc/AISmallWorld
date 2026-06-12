@@ -40,6 +40,12 @@ def main():
             result = json.loads(resp.read().decode("utf-8"))
 
         if result.get("ok"):
+            # 先打印未读消息（椰子掉落、被攻击、别人说话……）
+            unread = result.get("unread", [])
+            if unread:
+                for msg in unread:
+                    print(f"[未读] {msg}")
+                print("---")
             print(result["response"])
         else:
             print(f"错误：{result.get('error', '未知错误')}")

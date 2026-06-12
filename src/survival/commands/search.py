@@ -24,6 +24,7 @@ from evennia.utils.utils import delay
 
 from .base import SurvivalCommand
 from .drying_timer import attach_drying_timer
+from ..scripts.coconut_drop import attach_coconut_drop_timer
 
 
 # ── 模块级函数：供 delay() 回调，不依赖 Command 实例 ──
@@ -86,6 +87,7 @@ def _search_once(caller, room, target_name):
                     obj = objs[0]
                     obj.move_to(target, quiet=True)
                     attach_drying_timer(obj)
+                    attach_coconut_drop_timer(obj)
                     desc = entry.get("success_desc")
                     return True, desc or f"你找到了 {obj.key}！"
 

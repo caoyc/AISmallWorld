@@ -1,8 +1,10 @@
 """dh_client 守护进程。
 
-后台常驻，维护 Evennia 长连接，提供：
-- HTTP API (端口 5000)：接受 agent 命令
-- SSE 旁观端点 (端口 8080)：实时推送 agent 活动给浏览器
+架构：
+- connector 回调驱动：Evennia 每推一条消息，立即通过 on_text 回调转发
+- HTTP API (5000)：发命令后等待响应返回给 CLI（兼容现有用法）
+- SSE 旁观 (8080)：实时推送所有消息给浏览器（包括服务器主动推送）
+- 两者不冲突：回调同时推给旁观者和等待中的 HTTP 请求
 
 启动方式:
     cd AISmallWorld
@@ -15,8 +17,8 @@ import os
 import signal
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 
-# Windows 下强制 UTF-8 输出
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding="utf-8")
     sys.stderr.reconfigure(encoding="utf-8")
@@ -33,50 +35,85 @@ from .connector import EvenniaConnection
 @dataclass
 class Observer:
     """旁观者连接。"""
-
     resp: web.StreamResponse
 
-    async def send_cmd(self, ts: str, action: str):
-        """推送命令事件。"""
-        data = json.dumps({"ts": ts, "action": action}, ensure_ascii=False)
+    async def send_event(self, event_type: str, data: dict):
         try:
-            await self.resp.write(f"event: cmd\ndata: {data}\n\n".encode("utf-8"))
-        except ConnectionResetError:
-            pass
-
-    async def send_resp(self, ts: str, text: str):
-        """推送响应事件。"""
-        data = json.dumps({"ts": ts, "text": text}, ensure_ascii=False)
-        try:
-            await self.resp.write(f"event: resp\ndata: {data}\n\n".encode("utf-8"))
-        except ConnectionResetError:
-            pass
-
-    async def send_status(self, connected: bool):
-        """推送连接状态事件。"""
-        data = json.dumps({"connected": connected})
-        try:
-            await self.resp.write(f"event: status\ndata: {data}\n\n".encode("utf-8"))
-        except ConnectionResetError:
+            payload = json.dumps(data, ensure_ascii=False)
+            await self.resp.write(f"event: {event_type}\ndata: {payload}\n\n".encode("utf-8"))
+        except (ConnectionResetError, RuntimeError):
             pass
 
 
 @dataclass
 class DaemonState:
-    """守护进程全局状态。"""
-
     config: Config
     conn: EvenniaConnection | None = None
     observers: list = field(default_factory=list)
     action_log: list = field(default_factory=list)
     _stop_event: asyncio.Event = field(default_factory=asyncio.Event)
 
+    # HTTP 响应等待：发送命令后，on_text 回调收集响应并设置 future
+    _response_future: asyncio.Future | None = None
+    _response_texts: list = field(default_factory=list)
+    _response_timer_task: asyncio.Task | None = None
+
+    # 未读消息：两次命令之间到达的消息（椰子掉落、被攻击、别人说话……）
+    _unread: list = field(default_factory=list)
+
+
+def _now_ts() -> str:
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+# ---- Evennia 消息回调 ----
+
+
+async def _on_evennia_text(state: DaemonState, text: str):
+    """Evennia 每推一条消息，立即触发。
+
+    1. 广播给所有旁观者（实时推送）
+    2. 如果有 HTTP 请求在等响应，收集文本
+    """
+    ts = _now_ts()
+
+    # 1. 广播给旁观者
+    for obs in list(state.observers):
+        await obs.send_event("resp", {"ts": ts, "text": text})
+
+    # 2. 记录日志
+    state.action_log.append({"ts": ts, "text": text})
+    if len(state.action_log) > 200:
+        state.action_log = state.action_log[-100:]
+
+    # 3. 如果有 HTTP 请求在等响应，收集文本；否则进未读缓冲
+    if state._response_future and not state._response_future.done():
+        state._response_texts.append(text)
+        # 重置计时器：收到新消息，重新等 0.5 秒
+        if state._response_timer_task:
+            state._response_timer_task.cancel()
+        state._response_timer_task = asyncio.create_task(
+            _response_timeout(state, 0.5)
+        )
+    else:
+        # 没人在等 → 未读消息（椰子掉落、被攻击、社交……）
+        state._unread.append({"ts": ts, "text": text})
+
+
+async def _response_timeout(state: DaemonState, delay: float):
+    """响应超时：等待 delay 秒没有新消息，认为响应结束。"""
+    await asyncio.sleep(delay)
+    if state._response_future and not state._response_future.done():
+        texts = state._response_texts
+        state._response_texts = []
+        state._response_future.set_result("\n".join(texts) if texts else "（无响应）")
+
 
 # ---- HTTP API (端口 5000) ----
 
 
 async def _handle_action(request: web.Request) -> web.Response:
-    """POST /action — Agent 发送命令。"""
+    """POST /action — Agent 发送命令，等待响应返回。"""
     state: DaemonState = request.app["state"]
 
     try:
@@ -93,46 +130,65 @@ async def _handle_action(request: web.Request) -> web.Response:
 
     ts = _now_ts()
 
-    # 抄送给旁观者：命令
-    await _broadcast_cmd(state, ts, action)
+    # 广播命令给旁观者
+    for obs in list(state.observers):
+        await obs.send_event("cmd", {"ts": ts, "action": action})
+
+    # 先取走所有未读消息
+    unread = state._unread
+    state._unread = []
+
+    # 设置响应等待
+    state._response_future = asyncio.get_event_loop().create_future()
+    state._response_texts = []
 
     try:
-        response = await state.conn.send(action)
+        await state.conn.send_command(action)
     except ConnectionError:
+        # 归还未读消息
+        state._unread = unread + state._unread
         return web.json_response({"ok": False, "error": "连接中断，正在重连"})
 
-    # 抄送给旁观者：响应
-    await _broadcast_resp(state, _now_ts(), response)
+    # 等待响应（回调收集文本，超时触发返回）
+    try:
+        response = await asyncio.wait_for(state._response_future, timeout=15)
+    except asyncio.TimeoutError:
+        response = "\n".join(state._response_texts) if state._response_texts else "（无响应）"
+        state._response_texts = []
 
-    # 记录日志
+    state._response_future = None
+    if state._response_timer_task:
+        state._response_timer_task.cancel()
+        state._response_timer_task = None
+
+    # 记录
     state.action_log.append({"ts": ts, "action": action, "response": response})
-    if len(state.action_log) > 200:
-        state.action_log = state.action_log[-100:]
 
-    return web.json_response({"ok": True, "response": response})
+    result = {
+        "ok": True,
+        "response": response,
+    }
+    if unread:
+        result["unread"] = [u["text"] for u in unread]
+
+    return web.json_response(result)
 
 
 async def _handle_status(request: web.Request) -> web.Response:
-    """GET /status — 查询守护进程状态。"""
     state: DaemonState = request.app["state"]
     connected = state.conn is not None and state.conn.is_connected
-    return web.json_response({
-        "connected": connected,
-        "account": state.config.account,
-    })
+    return web.json_response({"connected": connected, "account": state.config.account})
 
 
 # ---- SSE 旁观端点 (端口 8080) ----
 
 
 async def _observer_page(request: web.Request) -> web.Response:
-    """GET / — 返回旁观页面 HTML。"""
     html_path = os.path.join(os.path.dirname(__file__), "static", "index.html")
     return web.FileResponse(html_path)
 
 
 async def _observer_events(request: web.Request) -> web.StreamResponse:
-    """GET /events — SSE 端点，实时推送 agent 活动。"""
     resp = web.StreamResponse()
     resp.content_type = "text/event-stream"
     resp.headers["Cache-Control"] = "no-cache"
@@ -144,27 +200,20 @@ async def _observer_events(request: web.Request) -> web.StreamResponse:
     state: DaemonState = request.app["state"]
     state.observers.append(observer)
 
-    # 先推送当前连接状态
+    # 推送连接状态
     connected = state.conn is not None and state.conn.is_connected
-    await observer.send_status(connected)
+    await observer.send_event("status", {"connected": connected})
 
-    # 回放最近的日志（最多 50 条）
+    # 回放最近日志
     for entry in state.action_log[-50:]:
-        await observer.send_cmd(entry["ts"], entry["action"])
-        await observer.send_resp(entry["ts"], entry["response"])
+        if "action" in entry:
+            await observer.send_event("cmd", {"ts": entry["ts"], "action": entry["action"]})
+        await observer.send_event("resp", {"ts": entry["ts"], "text": entry.get("response", entry.get("text", ""))})
 
     try:
-        # 保持连接，直到客户端断开或守护进程停止
-        stop_event = state._stop_event
-        client_closed = asyncio.ensure_future(_watch_client_disconnect(request, resp))
-        daemon_stop = asyncio.ensure_future(stop_event.wait())
-
-        done, pending = await asyncio.wait(
-            [client_closed, daemon_stop],
-            return_when=asyncio.FIRST_COMPLETED,
-        )
-        for p in pending:
-            p.cancel()
+        await state._stop_event.wait()
+    except asyncio.CancelledError:
+        pass
     finally:
         if observer in state.observers:
             state.observers.remove(observer)
@@ -172,79 +221,35 @@ async def _observer_events(request: web.Request) -> web.StreamResponse:
     return resp
 
 
-async def _watch_client_disconnect(request: web.Request, resp: web.StreamResponse):
-    """监视客户端是否断开。"""
-    try:
-        while not resp.task.done() if hasattr(resp, "task") else True:
-            await asyncio.sleep(1)
-    except asyncio.CancelledError:
-        pass
-
-
-# ---- 广播辅助 ----
-
-
-async def _broadcast_cmd(state: DaemonState, ts: str, action: str):
-    """向所有旁观者广播命令。"""
-    for obs in list(state.observers):
-        await obs.send_cmd(ts, action)
-
-
-async def _broadcast_resp(state: DaemonState, ts: str, text: str):
-    """向所有旁观者广播响应。"""
-    for obs in list(state.observers):
-        await obs.send_resp(ts, text)
-
-
-async def _broadcast_status(state: DaemonState, connected: bool):
-    """向所有旁观者广播连接状态。"""
-    for obs in list(state.observers):
-        await obs.send_status(connected)
-
-
-# ---- 断线重连监视 ----
+# ---- 断线重连 ----
 
 
 async def _watch_connection(state: DaemonState):
-    """监视 Evennia 连接，断线后自动重连。"""
     retry_count = 0
-
     while not state._stop_event.is_set():
         await asyncio.sleep(1)
-
         if state._stop_event.is_set():
             break
-
         if state.conn and state.conn.is_connected:
             retry_count = 0
             continue
-
-        # 连接断开
         retry_count += 1
         print(f"[daemon] 连接断开，第 {retry_count} 次重连...")
-
-        await _broadcast_status(state, False)
-
-        # 重连间隔
-        if retry_count <= 10:
-            wait = 3
-        else:
-            wait = 30
+        for obs in list(state.observers):
+            await obs.send_event("status", {"connected": False})
+        wait = 3 if retry_count <= 10 else 30
         await asyncio.sleep(wait)
-
         if state._stop_event.is_set():
             break
-
-        # 关闭旧连接
         if state.conn:
             await state.conn.close()
-
-        # 重建连接
         state.conn = EvenniaConnection(state.config)
+        state.conn.on_text(lambda text: _on_evennia_text(state, text))
         try:
             await state.conn.connect()
             print("[daemon] 重连成功")
-            await _broadcast_status(state, True)
+            for obs in list(state.observers):
+                await obs.send_event("status", {"connected": True})
             retry_count = 0
         except Exception as e:
             print(f"[daemon] 重连失败: {e}")
@@ -254,12 +259,10 @@ async def _watch_connection(state: DaemonState):
 
 
 async def _serve_api(state: DaemonState):
-    """启动 HTTP API 服务（端口 5000）。"""
     app = web.Application()
     app["state"] = state
     app.router.add_post("/action", _handle_action)
     app.router.add_get("/status", _handle_status)
-
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 5000)
@@ -268,12 +271,10 @@ async def _serve_api(state: DaemonState):
 
 
 async def _serve_observer(state: DaemonState):
-    """启动旁观 HTTP+SSE 服务（端口 8080）。"""
     app = web.Application()
     app["state"] = state
     app.router.add_get("/", _observer_page)
     app.router.add_get("/events", _observer_events)
-
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", 8080)
@@ -281,11 +282,7 @@ async def _serve_observer(state: DaemonState):
     print("[daemon] 旁观页面已启动: http://localhost:8080")
 
 
-# ---- SSE 心跳 ----
-
-
 async def _sse_heartbeat(state: DaemonState):
-    """每 30 秒向所有旁观者发送心跳，防止连接超时。"""
     while not state._stop_event.is_set():
         await asyncio.sleep(30)
         for obs in list(state.observers):
@@ -298,26 +295,16 @@ async def _sse_heartbeat(state: DaemonState):
 # ---- 主入口 ----
 
 
-def _now_ts() -> str:
-    """返回当前时间戳字符串。"""
-    from datetime import datetime
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
 async def _run(state: DaemonState):
-    """运行所有服务。"""
-    # 连接 Evennia
     print("[daemon] 正在连接 Evennia...")
     state.conn = EvenniaConnection(state.config)
-
+    state.conn.on_text(lambda text: _on_evennia_text(state, text))
     try:
         await state.conn.connect()
         print(f"[daemon] 已连接 Evennia，账号: {state.config.account}")
     except Exception as e:
         print(f"[daemon] 连接 Evennia 失败: {e}")
         print("[daemon] 将自动重试...")
-
-    # 启动所有服务
     await asyncio.gather(
         _serve_api(state),
         _serve_observer(state),
@@ -327,21 +314,15 @@ async def _run(state: DaemonState):
 
 
 def main():
-    """守护进程入口。"""
     config = load_config()
     state = DaemonState(config=config)
-
     print(f"[daemon] 守护进程启动，账号: {config.account}")
     print(f"[daemon] Evennia: {config.evennia_host}:{config.evennia_port}")
-
-    # 信号处理
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-
     if sys.platform != "win32":
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.add_signal_handler(sig, lambda: state._stop_event.set())
-
     try:
         loop.run_until_complete(_run(state))
     except KeyboardInterrupt:
