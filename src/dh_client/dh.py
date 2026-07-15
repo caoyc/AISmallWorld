@@ -50,8 +50,6 @@ def main():
         else:
             print(f"错误：{result.get('error', '未知错误')}")
 
-    except urllib.error.ConnectionError:
-        print("守护进程未运行，请先启动: python -m dh_client.daemon")
     except urllib.error.URLError:
         print("守护进程未运行，请先启动: python -m dh_client.daemon")
     except Exception as e:
