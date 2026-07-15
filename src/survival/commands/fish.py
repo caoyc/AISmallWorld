@@ -8,6 +8,7 @@
 
 import time
 import random
+from collections import Counter
 
 from evennia import Command, CmdSet
 from evennia.prototypes.spawner import spawn
@@ -158,12 +159,12 @@ class CmdCollect(Command):
                         catch.move_to(room, quiet=True)
                         caller.msg("背包已满，渔获放在了地上。")
             catch_names = []
-            for proto_key in catches:
+            for proto_key, count in Counter(catches).items():
                 objs_in_inv = [o for o in caller.contents
                                if o.tags.get(category="from_prototype") == proto_key]
                 if objs_in_inv:
-                    catch_names.append(objs_in_inv[-1].key)
-            caller.msg(f"你收起{trap.key}，收获了：{', '.join(catch_names)}。")
+                    catch_names.append(f"{objs_in_inv[-1].key}×{count}")
+            caller.msg(f"你收起{trap.key}，收获了：\n{'\n'.join(catch_names)}")
         else:
             caller.msg(f"你收起{trap.key}，但这次什么都没有捕获。")
 
