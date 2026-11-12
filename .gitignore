@@ -12,3 +12,4 @@ logs/
 .env
 dh_config.json
 .static/
+data_v4/
