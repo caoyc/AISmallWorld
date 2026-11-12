@@ -40,6 +40,7 @@ _AQUATIC_KEYS = {
     "mudskipper", "mangrove_shrimp", "mud_crab", "mangrove_clam", "sea_slug",
     "grouper", "spiny_lobster", "reef_crab", "oyster", "sea_snail",
     "tilapia", "river_shrimp", "stream_crab", "freshwater_mussel", "pond_snail",
+    "silver_scale_fish",
 }
 
 
@@ -495,5 +496,17 @@ def _create_dynamic_output(output_base, aquatic_key, recipe):
     output_obj.key = output_name
     # 更新描述以体现具体水产
     output_obj.db.desc_look = f"{output_name}，散发着诱人的香气。"
+
+    # 银鳞鱼等支持自定义烤制数值的水产：按 output_template 覆盖 hunger_restore
+    override_map = {
+        "烤{dishes_name}": "roast_hunger_restore",
+        "鲜美的烤{dishes_name}": "tasty_roast_hunger_restore",
+    }
+    override_key = override_map.get(output_template)
+    if override_key and aquatic_protos:
+        for attr_tuple in aquatic_protos[0].get("attrs", []):
+            if attr_tuple[0] == override_key:
+                output_obj.db.hunger_restore = attr_tuple[1]
+                break
 
     return output_obj

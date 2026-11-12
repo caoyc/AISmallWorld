@@ -67,6 +67,13 @@ LOCK_FUNC_MODULES = (
 DEFAULT_HOME = "#10"
 START_LOCATION = "#10"
 
+######################################################################
+# 注册节流（多 subagent 场景：主 agent 派遣多 subagent 各 register，
+# 默认 CREATION_THROTTLE_LIMIT=2 太严，放宽）
+######################################################################
+CREATION_THROTTLE_LIMIT = 20
+CREATION_THROTTLE_TIMEOUT = 60
+
 
 ######################################################################
 # Settings given in secret_settings.py override those in this file.

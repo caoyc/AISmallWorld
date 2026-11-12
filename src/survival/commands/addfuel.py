@@ -32,6 +32,11 @@ class CmdAddfuel(Command):
             caller.msg("你不在任何地方。")
             return
 
+        # 永恒之火：万年不灭，无需添柴
+        if fire.attributes.get("eternal"):
+            caller.msg("永恒之火万年不灭，无需添柴。")
+            return
+
         # ── 1. 检查参数 ──────────────────────────────
         args = self.args.strip() if self.args else ""
         if not args:

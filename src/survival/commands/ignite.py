@@ -49,6 +49,11 @@ class CmdIgnite(Command):
             caller.msg("你不在任何地方。")
             return
 
+        # 永恒之火：万年不灭，无需点火
+        if fire.attributes.get("eternal"):
+            caller.msg("永恒之火万年不灭，无需点火。")
+            return
+
         # ── 1. 检查篝火状态 ───────────────────────────
         fire_state = fire.db.fire_state
         if fire_state == "burning":

@@ -1,0 +1,7 @@
+# forgetting 包源头默认配置（本包参数的源默认值）。
+#
+# cooling_rate：牛顿冷却档位（CoolingRate 枚举名）。这是「源头默认」——
+#   上层 config（cluster/cluster_system/category_system 各自 config.toml）可覆盖；
+#   显式参数再覆盖上层 config。逐层覆盖，不从各配置删除（适用所有配置项）。
+#   方法参数传 None 时回退到此处；此处缺失则回退硬编码 CoolingRate.DAYS_31。
+cooling_rate = "DAYS_31"

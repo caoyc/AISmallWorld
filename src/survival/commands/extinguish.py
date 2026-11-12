@@ -31,6 +31,11 @@ class CmdExtinguish(Command):
             caller.msg("你不在任何地方。")
             return
 
+        # 永恒之火：万年不灭，无法熄灭
+        if fire.attributes.get("eternal"):
+            caller.msg("永恒之火万年不灭，无法熄灭。")
+            return
+
         # ── 1. 检查篝火状态 ──────────────────────────
         if fire.db.fire_state != "burning":
             caller.msg("篝火未在燃烧。")

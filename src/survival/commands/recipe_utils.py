@@ -275,6 +275,8 @@ def check_environment(caller, environment):
             return False, "你不在任何地方。", None
         for obj in room.contents:
             if obj.attributes.get("fire_state") == "burning":
+                if obj.attributes.get("eternal"):
+                    return True, "", obj          # 永恒之火：恒可用
                 burn_duration = obj.attributes.get("burn_duration", 0)
                 burn_cost = environment.get("burn_cost", 0)
                 if burn_duration < burn_cost:
@@ -354,6 +356,8 @@ def consume_environment(env_obj, environment):
     if env_obj is None or environment is None:
         return
 
+    if env_obj.attributes.get("eternal"):
+        return                              # 永恒之火：不消耗 burn_duration
     burn_cost = environment.get("burn_cost")
     if burn_cost:
         burn_duration = env_obj.attributes.get("burn_duration", 0)
@@ -542,6 +546,7 @@ def consume_materials_full(caller, materials, recipe=None):
         "mudskipper", "mangrove_shrimp", "mud_crab", "mangrove_clam", "sea_slug",
         "grouper", "spiny_lobster", "reef_crab", "oyster", "sea_snail",
         "tilapia", "river_shrimp", "stream_crab", "freshwater_mussel", "pond_snail",
+        "silver_scale_fish",
     }
 
     for entry in materials:

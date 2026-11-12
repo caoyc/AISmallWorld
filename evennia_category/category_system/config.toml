@@ -1,0 +1,11 @@
+# 动态优化分类体系配置（CategorySystemConfig 装配默认；与 config.py 同目录）。
+# TOML 无 null，可选键 llm_api_key 缺省由 .get() → None。
+
+cooling_rate       = "DAYS_31"                    # 冷却速率档位（CoolingRate 枚举）
+top_k              = 7                            # 向量检索返回数量
+delta_t            = 0.14285714285714285          # 记忆添加频率（秒，人阅读约每秒 7 单元）
+chroma_persist_dir = "./data_v4/chromadb"         # ChromaDB 持久化目录
+collection_name    = "category_paths"             # Collection 名称
+llm_model          = "anthropic/deepseek-v4-flash"  # LLM 模型名（含 provider 前缀；火山方舟 ark，走 anthropic/ Messages 兼容端点）
+llm_api_base       = "https://ark.cn-beijing.volces.com/api/coding"  # 火山方舟 ark API 地址（与 llm/config.toml·adapters 同源）
+llm_api_key        = "aa7eae8f-aaec-48b6-aa62-04556b2a744a"  # 火山方舟 API Key（与 llm/config.toml·adapters 同源；缺失为 None）

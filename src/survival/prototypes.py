@@ -422,6 +422,7 @@ PROTOTYPE_LIST = [
                 "mudskipper", "mangrove_shrimp", "mud_crab", "mangrove_clam", "sea_slug",
                 "grouper", "spiny_lobster", "reef_crab", "oyster", "sea_snail",
                 "tilapia", "river_shrimp", "stream_crab", "freshwater_mussel", "pond_snail",
+                "silver_scale_fish",
             ]),
         ],
     },
@@ -1939,6 +1940,54 @@ PROTOTYPE_LIST = [
         ],
     },
     {
+        "prototype_key": "eternal_fire",
+        "prototype_parent": "campfire",
+        "key": "永恒之火",
+        "attrs": [
+            ("eternal", True),
+            ("fire_state", "burning"),
+            ("burn_duration", 600),
+            ("desc_look", "一团悬浮于石台之上的火焰，无柴自燃，万年不灭，散发着恒定而温柔的暖光。"),
+            ("desc_burning", "永恒之火静静燃烧，不见柴薪，却永不衰歇。"),
+        ],
+    },
+    {
+        "prototype_key": "yinyang_spring",
+        "prototype_parent": "non_living",
+        "key": "阴阳泉",
+        "aliases": ["泉", "泉水"],
+        "locks": "get:false()",
+        "attrs": [
+            ("desc_look", "形如太极的两道泉水自岩缝涌出：阴泉幽蓝咸涩，阳泉明黄清甜，"
+                          "在潭底缓缓交融又泾渭分明。"),
+            # search 产出：条件概率，顺序遍历第一个命中即返回（search.py:_search_once）
+            # 鱼 5% → 海水 47.5% → 淡水 47.5%（兜底），合计 100%
+            ("resource", [
+                {"prototype": "silver_scale_fish", "chance": 0.05, "method": "search",
+                 "success_desc": "泉水中银光一闪，你竟捞起一条银鳞鱼！", "fail_desc": ""},
+                {"prototype": "salt_water_item", "chance": 0.5, "method": "search",
+                 "success_desc": "你从阴泉掬起一捧水，入口咸涩。", "fail_desc": ""},
+                {"prototype": "fresh_water_item", "chance": 1.0, "method": "search",
+                 "success_desc": "你从阳泉掬起一捧清甜的淡水。", "fail_desc": ""},
+            ]),
+        ],
+    },
+    {
+        "prototype_key": "silver_scale_fish",
+        "prototype_parent": ("animalia_actinopterygii", "animalpart_meat"),
+        "key": "银鳞鱼",
+        "attrs": [
+            ("can_eat", True),                   # 首个可生食水产（eat.py 读 hunger_restore）
+            ("item_type", "solid"),
+            ("dishes_name", "银鳞鱼"),            # cook 动态命名用
+            ("hunger_restore", 20),              # 生食 +20
+            ("roast_hunger_restore", 25),        # 烤银鳞鱼 +25（cook._create_dynamic_output 读）
+            ("tasty_roast_hunger_restore", 35),  # 鲜美烤银鳞鱼 +35
+            ("desc_look", "一条银光闪闪的鱼，鳞片如月华流转。"),
+            ("desc_smell", "清甜鲜味，无腥气。"),
+        ],
+    },
+    {
         "prototype_key": "tent",
         "prototype_parent": "non_living",
         "typeclass": "survival.objects.Tent",
@@ -2627,6 +2676,7 @@ PROTOTYPE_LIST = [
                     {"prototype": "stream_crab", "count": 1, "destroy_chance": 0},
                     {"prototype": "freshwater_mussel", "count": 1, "destroy_chance": 0},
                     {"prototype": "pond_snail", "count": 1, "destroy_chance": 0},
+                    {"prototype": "silver_scale_fish", "count": 1, "destroy_chance": 0},
                 ]},
                 {"alternatives": [
                     {"prototype": "tree_branch", "count": 1, "destroy_chance": 1},
@@ -2680,6 +2730,7 @@ PROTOTYPE_LIST = [
                     {"prototype": "stream_crab", "count": 1, "destroy_chance": 0},
                     {"prototype": "freshwater_mussel", "count": 1, "destroy_chance": 0},
                     {"prototype": "pond_snail", "count": 1, "destroy_chance": 0},
+                    {"prototype": "silver_scale_fish", "count": 1, "destroy_chance": 0},
                 ]},
                 {"prototype": "salt", "count": 1, "destroy_chance": 1},
                 {"alternatives": [
@@ -2732,6 +2783,7 @@ PROTOTYPE_LIST = [
                     {"prototype": "stream_crab", "count": 1, "destroy_chance": 0},
                     {"prototype": "freshwater_mussel", "count": 1, "destroy_chance": 0},
                     {"prototype": "pond_snail", "count": 1, "destroy_chance": 0},
+                    {"prototype": "silver_scale_fish", "count": 1, "destroy_chance": 0},
                 ]},
                 {"prototype": "coconut_shell", "count": 1, "destroy_chance": 1},
             ]),
@@ -2780,6 +2832,7 @@ PROTOTYPE_LIST = [
                     {"prototype": "stream_crab", "count": 1, "destroy_chance": 0},
                     {"prototype": "freshwater_mussel", "count": 1, "destroy_chance": 0},
                     {"prototype": "pond_snail", "count": 1, "destroy_chance": 0},
+                    {"prototype": "silver_scale_fish", "count": 1, "destroy_chance": 0},
                 ]},
                 {"prototype": "salt", "count": 1, "destroy_chance": 1},
                 {"prototype": "coconut_shell", "count": 1, "destroy_chance": 1},

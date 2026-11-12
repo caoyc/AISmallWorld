@@ -84,6 +84,10 @@ class SurvivalCharacter(DefaultCharacter):
         super().at_post_unpuppet(account=account, session=session, **kwargs)
 
     def tick_hunger_thirst(self, **kwargs):
+        # 安全区（如水帘洞）豁免饥渴衰减
+        room = self.location
+        if room and room.tags.get("safe_zone", category="zone"):
+            return
         self.db.hunger = max(0, self.db.hunger - self.HUNGER_DECAY)
         self.db.thirst = max(0, self.db.thirst - self.THIRST_DECAY)
         now = time.time()
@@ -253,16 +257,17 @@ class SurvivalCharacterV2(SurvivalCharacter):
             # resting 时不提示耐力警示信息（澄清3）
             return
 
-        # ── R40 帐篷自动保护 ──
+        # ── R40 帐篷自动保护 / 安全区豁免 ──
         has_tent = False
         if room:
             for obj in room.contents:
                 if obj.tags.get(category="from_prototype") == "tent":
                     has_tent = True
                     break
+        in_safe_zone = bool(room and room.tags.get("safe_zone", category="zone"))
 
-        # 无帐篷时，饥渴低则消耗耐力
-        if not has_tent:
+        # 无帐篷且非安全区时，饥渴低则消耗耐力
+        if not has_tent and not in_safe_zone:
             if self.db.hunger < 30 or self.db.thirst < 30:
                 self.db.stamina = max(0, self.db.stamina - 1)
 

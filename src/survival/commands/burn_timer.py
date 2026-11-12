@@ -51,6 +51,10 @@ class BurnTimer(DefaultScript):
         """每 BURN_TICK_INTERVAL 秒执行一次。"""
         fire = self.obj
 
+        # 永恒之火：不递减、不熄灭
+        if fire.attributes.get("eternal"):
+            return
+
         # BT-01：篝火已不处于燃烧状态（可能被外部 extinguish）
         if fire.db.fire_state != "burning":
             self.stop()
