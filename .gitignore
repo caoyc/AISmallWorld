@@ -13,3 +13,4 @@ logs/
 dh_config.json
 .static/
 data_v4/
+evennia_category/
